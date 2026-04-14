@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Understanding Edge in Prediction Markets: Why Calibration Matters More Than Accuracy | Trading Symposium</title>
+    <meta name="description" content="Learn why calibrated probabilities beat raw accuracy in prediction market trading. How to measure edge, Expected Calibration Error, and Closing Line Value.">
+    <meta name="keywords" content="prediction market edge, calibration, ECE, closing line value, sports betting edge, Polymarket strategy, win probability calibration">
+    <link rel="canonical" href="https://tradingsymposium.com/understanding-edge-prediction-markets">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1a1a2e; background: #fafafa; line-height: 1.8; }
+        .container { max-width: 760px; margin: 0 auto; padding: 0 24px; }
+        header { background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); color: white; padding: 40px 0; }
+        header h1 { font-size: 1.8rem; margin-bottom: 8px; }
+        header .meta { font-size: 0.9rem; opacity: 0.7; }
+        nav { background: #24243e; padding: 12px 0; }
+        nav .container { display: flex; gap: 24px; }
+        nav a { color: #b8b8d4; text-decoration: none; font-size: 0.95rem; }
+        nav a:hover { color: white; }
+        article { background: white; border-radius: 12px; padding: 40px 32px; margin: 32px auto; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        article h2 { font-size: 1.4rem; margin: 32px 0 12px; color: #302b63; }
+        article h3 { font-size: 1.15rem; margin: 24px 0 8px; color: #444; }
+        article p { margin-bottom: 16px; color: #333; }
+        article ul, article ol { margin: 0 0 16px 24px; color: #333; }
+        article li { margin-bottom: 6px; }
+        pre { background: #1a1a2e; color: #e0e0e0; padding: 20px; border-radius: 8px; overflow-x: auto; margin: 16px 0; font-size: 0.88rem; line-height: 1.5; }
+        code { font-family: 'SF Mono', 'Fira Code', monospace; }
+        table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.92rem; }
+        th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid #e8e8f0; }
+        th { background: #f5f5fa; color: #302b63; font-weight: 600; }
+        .callout { background: #f0f0ff; border-left: 4px solid #5c5ac7; padding: 16px 20px; margin: 20px 0; border-radius: 0 8px 8px 0; }
+        .callout a { color: #5c5ac7; font-weight: 600; }
+        .warning { background: #fff5f0; border-left: 4px solid #e74c3c; }
+        .cta { background: linear-gradient(135deg, #302b63, #5c5ac7); color: white; padding: 24px; border-radius: 12px; margin: 32px 0; text-align: center; }
+        .cta a { color: #fff; text-decoration: none; font-weight: 700; font-size: 1.1rem; border: 2px solid white; padding: 10px 24px; border-radius: 8px; display: inline-block; margin-top: 8px; }
+        .cta a:hover { background: rgba(255,255,255,0.15); }
+        footer { background: #24243e; color: #b8b8d4; padding: 30px 0; text-align: center; font-size: 0.85rem; }
+        footer a { color: #8e8cc7; }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="container">
+            <a href="/">Home</a>
+            <a href="/sports-prediction-trading-bot">Trading Bots</a>
+            <a href="/understanding-edge-prediction-markets">Finding Edge</a>
+        </div>
+    </nav>
+    <header>
+        <div class="container">
+            <h1>Understanding Edge in Prediction Markets: Why Calibration Matters More Than Accuracy</h1>
+            <div class="meta">April 14, 2026 &middot; 7 min read</div>
+        </div>
+    </header>
+    <div class="container">
+        <article>
+            <p>Every prediction market trader wants to pick winners. But picking winners isn't enough to be profitable. What matters is whether your predicted probabilities are <em>calibrated</em> &mdash; meaning when you say 70%, the event actually happens 70% of the time.</p>
+
+            <p>This distinction between accuracy and calibration is the single most important concept in prediction market trading. Get it right and you have a systematic edge. Get it wrong and you'll lose money even while picking more winners than losers.</p>
+
+            <h2>The Accuracy Trap</h2>
+            <p>Consider two models predicting NBA games:</p>
+
+            <table>
+                <tr><th>Model</th><th>Prediction</th><th>Actual Outcome</th><th>Profitable?</th></tr>
+                <tr><td>Model A</td><td>Boston 90%</td><td>Boston wins (90% of time)</td><td>Only if entry &lt; 90c</td></tr>
+                <tr><td>Model B</td><td>Boston 72%</td><td>Boston wins (72% of time)</td><td>Only if entry &lt; 72c</td></tr>
+            </table>
+
+            <p>Model A looks more confident and "accurate." But if the market is pricing Boston at 85 cents, Model A says buy (90% &gt; 85%), while Model B says pass (72% &lt; 85%). Model A is overconfident and will lose money at 85c. Model B is correctly calibrated and avoids the trap.</p>
+
+            <p>The key insight: <strong>a calibrated 72% prediction is more valuable than an overconfident 90% prediction</strong>, because it correctly identifies when the market price is too high.</p>
+
+            <h2>Measuring Calibration: ECE</h2>
+            <p>Expected Calibration Error (ECE) is the standard metric. It groups your predictions into probability buckets (50-60%, 60-70%, etc.) and measures how far the actual win rate in each bucket is from the predicted probability.</p>
+
+<pre><code>Bucket     Predicted   Actual WR   Gap
+50-60%     55.2%       57.1%       1.9pp  (good)
+60-70%     65.1%       63.8%       1.3pp  (good)
+70-80%     74.3%       71.0%       3.3pp  (ok)
+80-90%     84.7%       69.2%       15.5pp (BAD - overconfident!)
+
+ECE = weighted average of gaps = 5.5pp</code></pre>
+
+            <p>An ECE under 5 percentage points means your model is well-calibrated. Under 2pp is excellent. Above 10pp means your edge calculations are unreliable.</p>
+
+            <div class="callout">
+                <strong>Real-world benchmark:</strong> <a href="https://zenhodl.net/results?ref=tradingsymposium" target="_blank" rel="noopener">ZenHodl's production models</a> achieve ECE under 1pp on held-out test data across 10 sports, with live trading ECE averaging 6.2pp after recalibration.
+            </div>
+
+            <h2>Edge = Fair Value &minus; Market Price</h2>
+            <p>Once you have calibrated probabilities, edge calculation is simple: your fair value minus the market's ask price. If your model says 72 cents fair and the market asks 60 cents, you have a 12-cent edge.</p>
+
+            <p>But not all edges are created equal. Live trading data from 400+ bot trades reveals a counterintuitive pattern:</p>
+
+            <table>
+                <tr><th>Edge Size</th><th>Win Rate</th><th>Avg P&L per Trade</th></tr>
+                <tr><td>5-12 cents</td><td>64-67%</td><td>+4 to +8 cents</td></tr>
+                <tr><td>12-22 cents</td><td>58-62%</td><td>+5 to +18 cents</td></tr>
+                <tr><td>23-58 cents</td><td>44.7%</td><td>Negative</td></tr>
+            </table>
+
+            <p>The largest "edges" have the worst win rate. Why? Because a 40-cent edge usually means the model is wrong, not the market. The market has information your model doesn't &mdash; injuries, lineup changes, weather, sharp money. When your model and the market disagree by a huge amount, the market is usually right.</p>
+
+            <div class="warning callout">
+                <strong>Key rule:</strong> Cap your maximum edge at 25 cents. Anything larger is more likely to be a model error than a real opportunity.
+            </div>
+
+            <h2>Closing Line Value: The Ultimate Edge Metric</h2>
+            <p>Closing Line Value (CLV) measures whether you're consistently entering at better prices than the final market price. If you buy at 60 cents and the line closes at 65 cents, you have +5c CLV. This means the market moved toward your model's fair value after you entered &mdash; confirming your edge was real.</p>
+
+            <p>A positive average CLV across hundreds of trades is the strongest evidence that your model has genuine predictive power. Even if individual trades lose, positive CLV means you're systematically finding mispriced contracts.</p>
+
+            <h2>The Adverse Selection Problem</h2>
+            <p>Here's why backtests lie: your model might be perfectly calibrated on a random sample of games (ECE = 0.002), but the games where you actually trade are not random. You only trade when the model disagrees with the market. In those specific disagreements, the market might be right more often than your model.</p>
+
+            <p>This is called adverse selection, and it's the reason live trading performance is always worse than backtest performance. The fix is a live recalibrator &mdash; an isotonic regression layer that learns the mapping from your model's raw predictions to actual outcomes on traded games, and adjusts future predictions accordingly.</p>
+
+            <h2>Practical Filters That Work</h2>
+            <p>Based on live trading data across 1,000+ trades, these filters consistently improve profitability:</p>
+
+            <ol>
+                <li><strong>Period filters:</strong> Late-game trades outperform early-game. In MLB, innings 4, 6, and 7 are profitable while inning 5 loses money. In NHL, the 1st period (72.7% WR) destroys the 2nd period (52.2%).</li>
+                <li><strong>Toss-up exclusion:</strong> Skip contracts priced 45-55 cents. These are genuinely uncertain outcomes where fees and slippage eat any edge.</li>
+                <li><strong>Minimum fair probability:</strong> Requiring the model to assign at least 63-65% fair value filters out the lowest-confidence predictions that tend to be wrong.</li>
+                <li><strong>Spread filter:</strong> Never trade when the bid-ask spread exceeds 6-8 cents. Wide spreads signal low liquidity and high execution risk.</li>
+                <li><strong>Score differential:</strong> In basketball, requiring at least a 3-point lead eliminates tied/close games where the model has least conviction.</li>
+            </ol>
+
+            <div class="cta">
+                <p>Get calibrated win probabilities for 10 sports. ECE under 1pp. Ready-to-trade API.</p>
+                <a href="https://zenhodl.net/pricing?ref=tradingsymposium" target="_blank" rel="noopener">Try ZenHodl Free &rarr;</a>
+            </div>
+
+            <h2>Building Your Edge Stack</h2>
+            <p>A profitable prediction market trading system combines:</p>
+            <ul>
+                <li>A calibrated model (ECE &lt; 5pp) as the probability source</li>
+                <li>Signal filters tuned on live data, not just backtests</li>
+                <li>A live recalibrator correcting for adverse selection</li>
+                <li>Execution optimized for speed (sub-second signal-to-order)</li>
+                <li>Position sizing proportional to edge confidence, not edge size</li>
+                <li>CLV tracking to continuously validate that your edge is real</li>
+            </ul>
+
+            <p>The most common mistake is optimizing for win rate instead of calibration. A 55% win rate with calibrated probabilities will outperform a 65% win rate with overconfident probabilities, because the calibrated model knows exactly when to bet and how much.</p>
+
+            <div class="callout">
+                <strong>Further reading:</strong> See our guide on <a href="/sports-prediction-trading-bot">how to build a sports prediction trading bot</a> for the technical implementation, or explore <a href="https://zenhodl.net?ref=tradingsymposium" target="_blank" rel="noopener">ZenHodl's API</a> to skip the model-building phase.
+            </div>
+        </article>
+    </div>
+    <footer>
+        <div class="container">
+            <p>&copy; 2026 Trading Symposium. Prediction market trading involves risk. Past performance does not guarantee future results.</p>
+            <p style="margin-top: 8px;">Sports prediction data by <a href="https://zenhodl.net?ref=tradingsymposium" target="_blank" rel="noopener">ZenHodl</a>.</p>
+        </div>
+    </footer>
+</body>
+</html>

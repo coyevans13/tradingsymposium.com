@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Build a Sports Prediction Trading Bot for Polymarket | Trading Symposium</title>
+    <meta name="description" content="Step-by-step guide to building an automated sports prediction trading bot using calibrated win probability models on Polymarket.">
+    <meta name="keywords" content="Polymarket trading bot, sports prediction bot, win probability API, automated trading, sports betting bot, prediction market bot">
+    <link rel="canonical" href="https://tradingsymposium.com/sports-prediction-trading-bot">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1a1a2e; background: #fafafa; line-height: 1.8; }
+        .container { max-width: 760px; margin: 0 auto; padding: 0 24px; }
+        header { background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); color: white; padding: 40px 0; }
+        header h1 { font-size: 1.8rem; margin-bottom: 8px; }
+        header .meta { font-size: 0.9rem; opacity: 0.7; }
+        nav { background: #24243e; padding: 12px 0; }
+        nav .container { display: flex; gap: 24px; }
+        nav a { color: #b8b8d4; text-decoration: none; font-size: 0.95rem; }
+        nav a:hover { color: white; }
+        article { background: white; border-radius: 12px; padding: 40px 32px; margin: 32px auto; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        article h2 { font-size: 1.4rem; margin: 32px 0 12px; color: #302b63; }
+        article h3 { font-size: 1.15rem; margin: 24px 0 8px; color: #444; }
+        article p { margin-bottom: 16px; color: #333; }
+        article ul, article ol { margin: 0 0 16px 24px; color: #333; }
+        article li { margin-bottom: 6px; }
+        pre { background: #1a1a2e; color: #e0e0e0; padding: 20px; border-radius: 8px; overflow-x: auto; margin: 16px 0; font-size: 0.88rem; line-height: 1.5; }
+        code { font-family: 'SF Mono', 'Fira Code', monospace; }
+        .inline-code { background: #f0f0f5; padding: 2px 6px; border-radius: 4px; font-size: 0.9em; color: #302b63; }
+        .callout { background: #f0f0ff; border-left: 4px solid #5c5ac7; padding: 16px 20px; margin: 20px 0; border-radius: 0 8px 8px 0; }
+        .callout a { color: #5c5ac7; font-weight: 600; }
+        .cta { background: linear-gradient(135deg, #302b63, #5c5ac7); color: white; padding: 24px; border-radius: 12px; margin: 32px 0; text-align: center; }
+        .cta a { color: #fff; text-decoration: none; font-weight: 700; font-size: 1.1rem; border: 2px solid white; padding: 10px 24px; border-radius: 8px; display: inline-block; margin-top: 8px; }
+        .cta a:hover { background: rgba(255,255,255,0.15); }
+        footer { background: #24243e; color: #b8b8d4; padding: 30px 0; text-align: center; font-size: 0.85rem; }
+        footer a { color: #8e8cc7; }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="container">
+            <a href="/">Home</a>
+            <a href="/sports-prediction-trading-bot">Trading Bots</a>
+            <a href="/understanding-edge-prediction-markets">Finding Edge</a>
+        </div>
+    </nav>
+    <header>
+        <div class="container">
+            <h1>How to Build a Sports Prediction Trading Bot for Polymarket</h1>
+            <div class="meta">April 14, 2026 &middot; 8 min read</div>
+        </div>
+    </header>
+    <div class="container">
+        <article>
+            <p>Prediction markets like Polymarket let you buy and sell contracts on the outcome of real-world events. A contract trading at 65 cents implies a 65% probability that the event happens. When the market is wrong, there's money on the table.</p>
+
+            <p>The challenge: finding those mispricings consistently. That's where automated trading bots come in. A well-calibrated win probability model can scan hundreds of live games simultaneously, compare its fair value estimate to the market price, and execute trades when the edge exceeds a threshold.</p>
+
+            <h2>The Architecture</h2>
+            <p>A sports prediction trading bot has four components:</p>
+            <ol>
+                <li><strong>Data feed</strong> &mdash; Live game state from ESPN, official league APIs, or specialized providers</li>
+                <li><strong>Prediction model</strong> &mdash; Converts game state (score, time, period) into a win probability</li>
+                <li><strong>Signal engine</strong> &mdash; Compares model fair value to market price, applies filters (min edge, spread, staleness)</li>
+                <li><strong>Execution layer</strong> &mdash; Places fill-or-kill orders on Polymarket's CLOB with slippage protection</li>
+            </ol>
+
+            <h2>Step 1: Getting Live Win Probabilities</h2>
+            <p>The hardest part of building a prediction bot isn't the trading logic &mdash; it's the model. Training a calibrated win probability model requires historical play-by-play data, feature engineering (score differential, time remaining, period, home/away, team strength), and careful calibration to ensure your predicted probabilities match actual outcomes.</p>
+
+            <p>Most teams spend months building these models from scratch. An alternative is using a pre-built API that serves calibrated probabilities across multiple sports.</p>
+
+            <div class="callout">
+                <strong>Shortcut:</strong> <a href="https://zenhodl.net/pricing?ref=tradingsymposium" target="_blank" rel="noopener">ZenHodl's API</a> serves calibrated win probabilities for 10 sports (NBA, NFL, MLB, NHL, NCAAMB, NCAAWB, Tennis, Soccer, CS2, LoL) with Expected Calibration Error under 0.01. One REST call returns a fair probability you can trade against.
+            </div>
+
+            <h3>Example API Call</h3>
+<pre><code>curl "https://zenhodl.net/v1/predict?sport=NBA&home=BOS&away=MIA&home_score=58&away_score=52&period=3&clock=4:30"
+
+{
+  "home_wp": 0.724,
+  "away_wp": 0.276,
+  "confidence_interval": [0.68, 0.77],
+  "model": "split_phase_xgboost",
+  "calibrated": true,
+  "ece": 0.002
+}</code></pre>
+
+            <h2>Step 2: Finding the Edge</h2>
+            <p>Edge is the difference between your model's fair value and the market price. If your model says a team has a 72% chance of winning but the market is pricing it at 60 cents, you have a 12-cent edge.</p>
+
+            <p>Not all edges are real. Key filters that separate profitable signals from noise:</p>
+            <ul>
+                <li><strong>Minimum edge threshold</strong> &mdash; Edges under 8-10 cents rarely survive slippage and fees</li>
+                <li><strong>Maximum edge cap</strong> &mdash; Edges over 25 cents are often the model being wrong, not the market. Counterintuitive but validated by live trading data</li>
+                <li><strong>Spread filter</strong> &mdash; Wide bid-ask spreads (6+ cents) eat your edge on entry</li>
+                <li><strong>Period filter</strong> &mdash; Some game periods are more predictable than others. Late-game trades typically have higher win rates</li>
+                <li><strong>Toss-up exclusion</strong> &mdash; Avoid contracts priced 45-55 cents. True coin flips with negative EV after fees</li>
+            </ul>
+
+            <h2>Step 3: The Signal Loop</h2>
+            <p>The bot runs a continuous loop: poll game states, compute fair values, compare to market prices, and fire signals when all filters pass.</p>
+
+<pre><code>while running:
+    games = fetch_live_games()          # ESPN API
+    for game in games:
+        fair_wp = model.predict(game)   # Your model or API
+        market_price = get_ask(game)    # Polymarket WebSocket
+        edge = fair_wp - market_price
+
+        if edge > MIN_EDGE and passes_filters(game, edge):
+            place_order(game, size=calculate_size(edge))
+
+    sleep(0.5)  # 500ms tick interval</code></pre>
+
+            <h2>Step 4: Execution</h2>
+            <p>Polymarket uses a Central Limit Order Book (CLOB). The safest execution method is Fill-or-Kill (FOK): you either get your full fill at or below your limit price, or the order is cancelled. No partial fills hanging in the market.</p>
+
+            <p>Critical execution details:</p>
+            <ul>
+                <li><strong>Use WebSocket prices</strong> for signal detection (1-15ms latency vs 200-300ms for HTTP)</li>
+                <li><strong>Pass reference price</strong> to skip the HTTP orderbook fetch on execution (saves 200ms)</li>
+                <li><strong>Verify on-chain settlement</strong> after CLOB match confirmation</li>
+                <li><strong>Track slippage</strong> (difference between signal price and fill price) to monitor execution quality</li>
+            </ul>
+
+            <h2>Step 5: Calibration and Recalibration</h2>
+            <p>A model calibrated on historical data will drift when applied to live markets. The specific games where your model disagrees with the market are not a random sample &mdash; they're games where one of you is wrong. This adverse selection effect means your live win rate will be lower than your backtest win rate.</p>
+
+            <p>The fix: a live recalibrator that tracks model predictions vs actual outcomes and applies isotonic regression to correct for drift. After 50+ resolved trades, the correction activates and adjusts future predictions automatically.</p>
+
+            <div class="cta">
+                <p>Skip the model-building phase. Get calibrated win probabilities for 10 sports via API.</p>
+                <a href="https://zenhodl.net/pricing?ref=tradingsymposium" target="_blank" rel="noopener">Start Free Trial &rarr;</a>
+            </div>
+
+            <h2>What to Expect</h2>
+            <p>Realistic expectations for a well-built prediction trading bot:</p>
+            <ul>
+                <li><strong>Win rate:</strong> 55-65% across a diversified sports portfolio</li>
+                <li><strong>Per-trade profit:</strong> +3 to +12 cents average</li>
+                <li><strong>Losing streaks:</strong> 5-8 consecutive losses are normal. Position sizing matters</li>
+                <li><strong>Edge decay:</strong> Markets get more efficient over time. Continuous recalibration is essential</li>
+                <li><strong>Best sports:</strong> MLB (late innings), NHL (1st period), and tennis (mid-set) tend to have the most exploitable mispricings</li>
+            </ul>
+
+            <p>The key insight from running a live bot across 400+ trades: the model doesn't need to be perfect. It needs to be <em>calibrated</em>. A model that says 70% and is right 70% of the time will print money at any entry price below 70 cents. A model that says 90% but is right only 70% will lose everything.</p>
+
+            <div class="callout">
+                <strong>Want to see live results?</strong> Check <a href="https://zenhodl.net/results?ref=tradingsymposium" target="_blank" rel="noopener">ZenHodl's public results page</a> for real-time bot performance across all 10 sports.
+            </div>
+        </article>
+    </div>
+    <footer>
+        <div class="container">
+            <p>&copy; 2026 Trading Symposium. Prediction market trading involves risk.</p>
+            <p style="margin-top: 8px;">Sports prediction data by <a href="https://zenhodl.net?ref=tradingsymposium" target="_blank" rel="noopener">ZenHodl</a>.</p>
+        </div>
+    </footer>
+</body>
+</html>
