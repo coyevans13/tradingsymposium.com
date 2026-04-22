@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Read a Polymarket Order Book Like a Sharp Trader | Trading Symposium</title>
+    <meta name="description" content="A practical guide to reading and interpreting the Polymarket order book. Spread, depth, size at levels, and what market-maker behavior tells you before you trade.">
+    <meta name="keywords" content="Polymarket order book, spread, depth of market, prediction market execution, market microstructure, DOM">
+    <link rel="canonical" href="https://tradingsymposium.com/polymarket-order-book-sharp-traders">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1a1a2e; background: #fafafa; line-height: 1.8; }
+        .container { max-width: 760px; margin: 0 auto; padding: 0 24px; }
+        header { background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); color: white; padding: 40px 0; }
+        header h1 { font-size: 1.8rem; margin-bottom: 8px; }
+        header .meta { font-size: 0.9rem; opacity: 0.7; }
+        nav { background: #24243e; padding: 12px 0; }
+        nav .container { display: flex; gap: 24px; flex-wrap: wrap; }
+        nav a { color: #b8b8d4; text-decoration: none; font-size: 0.95rem; }
+        nav a:hover { color: white; }
+        article { background: white; border-radius: 12px; padding: 40px 32px; margin: 32px auto; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        article h2 { font-size: 1.4rem; margin: 32px 0 12px; color: #302b63; }
+        article h3 { font-size: 1.15rem; margin: 24px 0 8px; color: #444; }
+        article p { margin-bottom: 16px; color: #333; }
+        article ul, article ol { margin: 0 0 16px 24px; color: #333; }
+        article li { margin-bottom: 6px; }
+        pre { background: #1a1a2e; color: #e0e0e0; padding: 20px; border-radius: 8px; overflow-x: auto; margin: 16px 0; font-size: 0.88rem; line-height: 1.5; }
+        code { font-family: 'SF Mono', 'Fira Code', monospace; }
+        .inline-code { background: #f0f0f5; padding: 2px 6px; border-radius: 4px; font-size: 0.9em; color: #302b63; }
+        .callout { background: #f0f0ff; border-left: 4px solid #5c5ac7; padding: 16px 20px; margin: 20px 0; border-radius: 0 8px 8px 0; }
+        .callout a { color: #5c5ac7; font-weight: 600; }
+        .book { font-family: 'SF Mono', 'Fira Code', monospace; background: #f4f4fa; border: 1px solid #d8d8e5; border-radius: 8px; padding: 16px; margin: 20px 0; font-size: 0.92rem; color: #1a1a2e; white-space: pre; overflow-x: auto; line-height: 1.5; }
+        .book .ask { color: #c62828; }
+        .book .bid { color: #2e7d32; }
+        .cta { background: linear-gradient(135deg, #302b63, #5c5ac7); color: white; padding: 24px; border-radius: 12px; margin: 32px 0; text-align: center; }
+        .cta a { color: #fff; text-decoration: none; font-weight: 700; font-size: 1.1rem; border: 2px solid white; padding: 10px 24px; border-radius: 8px; display: inline-block; margin-top: 8px; }
+        .cta a:hover { background: rgba(255,255,255,0.15); }
+        table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.95rem; }
+        th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid #e0e0e5; }
+        th { color: #302b63; font-weight: 700; background: #f0f0ff; }
+        footer { background: #24243e; color: #b8b8d4; padding: 30px 0; text-align: center; font-size: 0.85rem; }
+        footer a { color: #8e8cc7; }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="container">
+            <a href="/">Home</a>
+            <a href="/sports-prediction-trading-bot">Trading Bots</a>
+            <a href="/understanding-edge-prediction-markets">Finding Edge</a>
+            <a href="/kelly-criterion-prediction-market-sizing">Kelly Sizing</a>
+            <a href="/polymarket-order-book-sharp-traders">Order Books</a>
+            <a href="/risk-management-prediction-market-bots">Risk Management</a>
+        </div>
+    </nav>
+    <header>
+        <div class="container">
+            <h1>How to Read a Polymarket Order Book Like a Sharp Trader</h1>
+            <div class="meta">April 21, 2026 &middot; 12 min read</div>
+        </div>
+    </header>
+    <div class="container">
+        <article>
+            <p>The difference between a trader who captures edge and one who leaks it to the market isn't usually the model — it's how they execute. Two people with identical prediction models can have wildly different P&amp;L, and most of that gap comes from how they read the order book at the moment of entry.</p>
+
+            <p>This post explains what an order book actually tells you on Polymarket, which signals indicate fills are safe versus risky, and how professional traders use depth-of-market data to decide when to fire, when to post passively, and when to pass entirely.</p>
+
+            <h2>What an Order Book Shows You</h2>
+
+            <p>Every Polymarket contract has a central limit order book (CLOB) with:</p>
+
+            <ul>
+                <li><strong>Bids</strong>: buy orders, sorted from highest price to lowest</li>
+                <li><strong>Asks</strong>: sell orders, sorted from lowest price to highest</li>
+                <li><strong>Size at each level</strong>: how many contracts are offered at that price</li>
+                <li><strong>The spread</strong>: best ask minus best bid</li>
+                <li><strong>The mid</strong>: (best bid + best ask) / 2</li>
+            </ul>
+
+            <p>A simplified snapshot for a single YES contract:</p>
+
+            <div class="book"><span class="ask">Ask 0.67    120 shares</span>
+<span class="ask">Ask 0.66     45 shares</span>
+<span class="ask">Ask 0.65     12 shares   &lt;-- best ask</span>
+───────────────────────────
+<span class="bid">Bid 0.63    100 shares   &lt;-- best bid</span>
+<span class="bid">Bid 0.62     80 shares</span>
+<span class="bid">Bid 0.61    150 shares</span></div>
+
+            <p>Best ask is 0.65, best bid is 0.63, spread is 0.02 (2 cents), mid is 0.64.</p>
+
+            <h2>Signal 1: The Spread</h2>
+            <p>The spread is the cheapest reading of liquidity. Tight spreads (1-2c) on sports markets mean a market maker is actively quoting both sides and is confident enough to offer close prices. Wide spreads (5c+) mean either low liquidity, uncertainty, or both.</p>
+
+            <table>
+                <tr><th>Spread</th><th>Read</th><th>Action</th></tr>
+                <tr><td>1-2c</td><td>Tight, market maker present</td><td>Safe to take. Low slippage risk.</td></tr>
+                <tr><td>3-4c</td><td>Normal for sports in-play</td><td>Trade at small-to-medium size.</td></tr>
+                <tr><td>5-6c</td><td>Wide. Either pre-game or volatile state.</td><td>Small size only, or post passive bid.</td></tr>
+                <tr><td>7c+</td><td>Very wide. Market maker offline or market confused.</td><td>Skip or post a passive bid 1c inside.</td></tr>
+            </table>
+
+            <p>A trading rule that saves more money than it costs: <strong>cap your entry at spread ≤ 6c</strong>. Wider spreads mean you're paying the spread as a fixed cost on top of whatever edge you have.</p>
+
+            <h2>Signal 2: Top-of-Book Size</h2>
+
+            <p>Size at the best ask tells you how much you can take before moving to the next price level. If the best ask is 12 shares and you want to buy 50, you'll "walk the book" and pay progressively higher prices for 38 of your 50 shares.</p>
+
+            <p>For the book above:</p>
+
+            <ul>
+                <li>Buying 10 shares: all fill at 0.65. Average price 0.65.</li>
+                <li>Buying 50 shares: 12 at 0.65, 38 at 0.66. Average 0.658.</li>
+                <li>Buying 100 shares: 12 at 0.65, 45 at 0.66, 43 at 0.67. Average 0.664.</li>
+            </ul>
+
+            <p>That 0.014 difference between 10-share and 100-share fills is pure slippage. If you thought you had a 5c edge at the best ask, buying 100 shares cuts your effective edge to 3.6c. On highly illiquid markets, a 100-share order might consume half your edge.</p>
+
+            <div class="callout">
+                <strong>Practical rule:</strong> your order size should consume no more than ~50% of the best level's size. If you want to buy 50 but best ask shows 20, split the order and stagger, or reduce size.
+            </div>
+
+            <h2>Signal 3: Book Imbalance</h2>
+
+            <p>Compare total size on the bid side to total size on the ask side (across top 3-5 levels). Heavy imbalance signals market-maker inventory skew.</p>
+
+            <h3>Heavy bid-side size (buys lined up, few sellers)</h3>
+            <p>The market maker is short the contract and defending higher prices by refusing to quote low asks. Your next market-buy order will push price up. Bad time to take at the ask.</p>
+
+            <h3>Heavy ask-side size (sells lined up, few buyers)</h3>
+            <p>Market maker is long and trying to offload inventory. Your ask-taking fills cleanly. Good execution environment.</p>
+
+            <h3>Balanced book</h3>
+            <p>Normal. Size both sides, tight spread. Any fill should work at stated prices.</p>
+
+            <p>Compute it as a ratio:</p>
+
+<pre><code>def book_imbalance(book: dict, levels: int = 3) -&gt; float:
+    """Returns ratio of bid size to ask size over top N levels.
+    &gt; 1 = bid-heavy (harder to buy cheap). &lt; 1 = ask-heavy (easy to buy).
+    """
+    bid_sz = sum(b["size"] for b in book["bids"][:levels])
+    ask_sz = sum(a["size"] for a in book["asks"][:levels])
+    if ask_sz == 0:
+        return float("inf")
+    return bid_sz / ask_sz
+
+# Example
+if book_imbalance(book) &gt; 2.0:
+    # Bids &gt;&gt; asks. Expect upward price pressure. Skip taker buys.
+    skip("book-imbalance")
+</code></pre>
+
+            <h2>Signal 4: Level Stickiness</h2>
+
+            <p>A price level that's been sitting on the book for minutes with real size is a <em>hard level</em>. A level that flickers in and out is a <em>soft level</em>. You want to take liquidity at hard levels — they're less likely to move away when your order hits.</p>
+
+            <p>In practice, track the persistence of top-of-book levels across snapshots:</p>
+
+<pre><code>class LevelTracker:
+    def __init__(self):
+        self.first_seen: dict = {}  # (price, side) -&gt; first_seen_ts
+
+    def observe(self, best_ask_price: float, ts: float):
+        key = ("ask", best_ask_price)
+        if key not in self.first_seen:
+            # New level, possibly soft
+            self.first_seen[key] = ts
+        # Return how long this level has been visible
+        return ts - self.first_seen[key]
+
+# If the level has been &gt; 3 seconds old, it's relatively hard. Safer to take.
+</code></pre>
+
+            <h2>Signal 5: Quote Age / Staleness</h2>
+
+            <p>Between the moment the market maker's quote was posted and the moment you hit it, new information may have arrived. On sports markets, a score change after the quote but before your fill creates two scenarios:</p>
+
+            <ul>
+                <li>Score change favors your side → market will reprice higher, your entry fills at a bargain</li>
+                <li>Score change against your side → market will reprice lower, your entry fills at what's now a bad price</li>
+            </ul>
+
+            <p>You can't know which direction ahead of time, but you can <em>skip trades where the quote is stale</em>. If the best ask was posted 15+ seconds ago and hasn't updated, and a score just changed, the market maker is about to move that quote. Don't race them.</p>
+
+<pre><code>def is_quote_fresh(book: dict, max_age_s: float = 5.0) -&gt; bool:
+    """Is the top-of-book fresh enough to trust?"""
+    age = time.time() - book.get("last_update_ts", 0)
+    return age &lt; max_age_s
+</code></pre>
+
+            <h2>When to Post Instead of Take</h2>
+
+            <p>If the book is wide but your edge is real, you can <em>post</em> a bid 1-2 cents inside the current best ask and wait for a seller to hit you. This captures the spread instead of paying it — a real edge multiplier for a high-frequency bot.</p>
+
+            <p>The tradeoff: you may not fill at all. The decision:</p>
+
+            <table>
+                <tr><th>Spread</th><th>Your edge</th><th>Take or post?</th></tr>
+                <tr><td>≤ 3c</td><td>≥ 8c</td><td>Take. The spread cost is tiny.</td></tr>
+                <tr><td>4-6c</td><td>≥ 8c</td><td>Consider posting at best_ask − 1c.</td></tr>
+                <tr><td>4-6c</td><td>5-7c</td><td>Post passive. Taking eats most of your edge.</td></tr>
+                <tr><td>7c+</td><td>Any</td><td>Post or skip. Taking is expensive at any edge.</td></tr>
+            </table>
+
+            <h2>Putting the Signals Together</h2>
+
+            <p>A practical entry filter combining all five:</p>
+
+<pre><code>def entry_safe(book: dict, order_size: int) -&gt; tuple[bool, str]:
+    """Returns (can_enter, reason). Trade only if can_enter."""
+    spread = book["asks"][0]["price"] - book["bids"][0]["price"]
+    best_ask_size = book["asks"][0]["size"]
+    imb = book_imbalance(book)
+    age = time.time() - book["last_update_ts"]
+
+    if spread &gt; 0.06:
+        return False, f"spread_too_wide({spread:.3f})"
+    if order_size &gt; best_ask_size * 0.5:
+        return False, f"size_too_big({order_size} vs {best_ask_size})"
+    if imb &gt; 2.5:
+        return False, f"bid_heavy_book({imb:.1f})"
+    if age &gt; 5.0:
+        return False, f"stale_quote({age:.1f}s)"
+    return True, "ok"
+</code></pre>
+
+            <p>This kind of pre-trade check is what separates a bot that leaks 2-3c to bad fills on every trade from one that captures the edge it calculates.</p>
+
+            <div class="cta">
+                <p><strong>Get calibrated signals + execution guidance.</strong> ZenHodl's API includes pre-trade book quality checks alongside live win probabilities for 11 sports.</p>
+                <a href="https://zenhodl.net">See ZenHodl</a>
+            </div>
+
+            <p>Further reading: <a href="/kelly-criterion-prediction-market-sizing">Kelly Criterion for Position Sizing</a> &middot; <a href="/risk-management-prediction-market-bots">Risk Management for Bots</a> &middot; <a href="/understanding-edge-prediction-markets">Finding Edge in Prediction Markets</a></p>
+        </article>
+    </div>
+
+    <footer>
+        <div class="container">
+            &copy; 2026 Trading Symposium &middot; <a href="https://zenhodl.net">ZenHodl API</a>
+        </div>
+    </footer>
+</body>
+</html>

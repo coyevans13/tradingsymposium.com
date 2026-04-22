@@ -1,0 +1,13 @@
+# Disavow file for tradingsymposium.com
+# Generated: 2026-04-21
+# Reason: Remove spam/PBN domains from backlink profile while preserving
+# the legitimate finance backlinks (forexfactory, financemagnates, smbtraining).
+#
+# Upload at: https://search.google.com/search-console/disavow-links
+# Select property: https://tradingsymposium.com/ (URL-prefix property)
+
+# a-brandir.neocities.org — spam PBN with 14,765 outbound links, anchor="backlink"
+domain:neocities.org
+
+# The Fastlane Forum — garbled/encoded spam anchor injection, already bot-blocked
+domain:thefastlaneforum.com

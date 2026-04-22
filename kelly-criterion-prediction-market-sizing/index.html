@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Kelly Criterion for Prediction Market Sizing | Trading Symposium</title>
+    <meta name="description" content="A practical guide to applying the Kelly Criterion when sizing positions on Polymarket and other prediction markets. Formulas, fractional Kelly, edge estimation errors.">
+    <meta name="keywords" content="Kelly criterion, prediction market sizing, position sizing, Polymarket, fractional Kelly, bet sizing">
+    <link rel="canonical" href="https://tradingsymposium.com/kelly-criterion-prediction-market-sizing">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1a1a2e; background: #fafafa; line-height: 1.8; }
+        .container { max-width: 760px; margin: 0 auto; padding: 0 24px; }
+        header { background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); color: white; padding: 40px 0; }
+        header h1 { font-size: 1.8rem; margin-bottom: 8px; }
+        header .meta { font-size: 0.9rem; opacity: 0.7; }
+        nav { background: #24243e; padding: 12px 0; }
+        nav .container { display: flex; gap: 24px; flex-wrap: wrap; }
+        nav a { color: #b8b8d4; text-decoration: none; font-size: 0.95rem; }
+        nav a:hover { color: white; }
+        article { background: white; border-radius: 12px; padding: 40px 32px; margin: 32px auto; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        article h2 { font-size: 1.4rem; margin: 32px 0 12px; color: #302b63; }
+        article h3 { font-size: 1.15rem; margin: 24px 0 8px; color: #444; }
+        article p { margin-bottom: 16px; color: #333; }
+        article ul, article ol { margin: 0 0 16px 24px; color: #333; }
+        article li { margin-bottom: 6px; }
+        pre { background: #1a1a2e; color: #e0e0e0; padding: 20px; border-radius: 8px; overflow-x: auto; margin: 16px 0; font-size: 0.88rem; line-height: 1.5; }
+        code { font-family: 'SF Mono', 'Fira Code', monospace; }
+        .inline-code { background: #f0f0f5; padding: 2px 6px; border-radius: 4px; font-size: 0.9em; color: #302b63; }
+        .callout { background: #f0f0ff; border-left: 4px solid #5c5ac7; padding: 16px 20px; margin: 20px 0; border-radius: 0 8px 8px 0; }
+        .callout a { color: #5c5ac7; font-weight: 600; }
+        .formula { background: #fff8e1; border: 1px solid #ffc107; border-radius: 8px; padding: 16px; margin: 20px 0; font-family: 'Times New Roman', serif; font-size: 1.1rem; text-align: center; }
+        .cta { background: linear-gradient(135deg, #302b63, #5c5ac7); color: white; padding: 24px; border-radius: 12px; margin: 32px 0; text-align: center; }
+        .cta a { color: #fff; text-decoration: none; font-weight: 700; font-size: 1.1rem; border: 2px solid white; padding: 10px 24px; border-radius: 8px; display: inline-block; margin-top: 8px; }
+        .cta a:hover { background: rgba(255,255,255,0.15); }
+        table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.95rem; }
+        th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid #e0e0e5; }
+        th { color: #302b63; font-weight: 700; background: #f0f0ff; }
+        footer { background: #24243e; color: #b8b8d4; padding: 30px 0; text-align: center; font-size: 0.85rem; }
+        footer a { color: #8e8cc7; }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="container">
+            <a href="/">Home</a>
+            <a href="/sports-prediction-trading-bot">Trading Bots</a>
+            <a href="/understanding-edge-prediction-markets">Finding Edge</a>
+            <a href="/kelly-criterion-prediction-market-sizing">Kelly Sizing</a>
+            <a href="/polymarket-order-book-sharp-traders">Order Books</a>
+            <a href="/risk-management-prediction-market-bots">Risk Management</a>
+        </div>
+    </nav>
+    <header>
+        <div class="container">
+            <h1>The Kelly Criterion for Prediction Market Sizing</h1>
+            <div class="meta">April 21, 2026 &middot; 11 min read</div>
+        </div>
+    </header>
+    <div class="container">
+        <article>
+            <p>You found a 5-cent edge on a Polymarket contract. How many shares do you buy? A traditional trader's answer might be "2% of capital" or "$500, that's my standard size." Those answers waste your edge. The Kelly Criterion is the mathematically correct answer to exactly this question — and on prediction markets, it matters more than on almost any other trading venue.</p>
+
+            <p>This post derives the Kelly formula for prediction market contracts, walks through why full Kelly is rarely the right choice, and shows how to apply fractional Kelly to an automated trading bot with working Python.</p>
+
+            <h2>What the Kelly Criterion Actually Does</h2>
+            <p>The Kelly Criterion tells you the fraction of your bankroll to stake on a single bet to maximize the <strong>long-term geometric growth rate</strong> of your bankroll. Two critical words:</p>
+
+            <ul>
+                <li><strong>Long-term.</strong> Over many bets. Any single bet can lose.</li>
+                <li><strong>Geometric.</strong> Not total profit — the compounding rate. Bankroll doubling, not dollars earned.</li>
+            </ul>
+
+            <p>The insight: if your edge is small, you want to bet small. If your edge is large, you want to bet bigger — but never so big that a single loss destroys your bankroll. Kelly finds the sweet spot.</p>
+
+            <h2>The Formula for Binary Contracts</h2>
+            <p>Polymarket contracts are binary: they settle at $1 (your side wins) or $0 (your side loses). If you buy at price <span class="inline-code">p</span> and your estimated true probability is <span class="inline-code">q</span>, the Kelly fraction is:</p>
+
+            <div class="formula">
+                f* = (q − p) / (1 − p)
+            </div>
+
+            <p>Where:</p>
+            <ul>
+                <li><strong>f*</strong> = fraction of bankroll to stake</li>
+                <li><strong>q</strong> = your true probability estimate</li>
+                <li><strong>p</strong> = market price (as a probability, 0.0 to 1.0)</li>
+            </ul>
+
+            <p>In words: Kelly fraction equals your edge (<span class="inline-code">q − p</span>) divided by the payoff (<span class="inline-code">1 − p</span>) if you win.</p>
+
+            <h3>Worked example</h3>
+            <p>Polymarket has a contract trading at $0.60 for "Home team wins." Your calibrated model estimates the home team's true probability at 0.72. You have a $5,000 bankroll.</p>
+
+            <ul>
+                <li>p = 0.60, q = 0.72</li>
+                <li>f* = (0.72 − 0.60) / (1 − 0.60) = 0.12 / 0.40 = <strong>0.30</strong></li>
+                <li>Kelly stake = $5,000 × 0.30 = <strong>$1,500</strong></li>
+            </ul>
+
+            <p>That's a big stake. Which is why almost nobody actually uses full Kelly.</p>
+
+            <h2>Why Full Kelly Is Too Aggressive</h2>
+
+            <p>Full Kelly assumes you know <span class="inline-code">q</span> <em>exactly</em>. In practice, you have an <em>estimate</em> of q with some error. Even a calibrated model with Expected Calibration Error of 2% has real uncertainty on any single prediction. Small errors in q produce large errors in Kelly fraction.</p>
+
+            <p>Consider the previous example with slightly worse inputs:</p>
+
+            <table>
+                <tr><th>Your estimate (q)</th><th>Market (p)</th><th>Full Kelly f*</th><th>Stake (of $5k)</th></tr>
+                <tr><td>0.72</td><td>0.60</td><td>30.0%</td><td>$1,500</td></tr>
+                <tr><td>0.68</td><td>0.60</td><td>20.0%</td><td>$1,000</td></tr>
+                <tr><td>0.64</td><td>0.60</td><td>10.0%</td><td>$500</td></tr>
+                <tr><td>0.60</td><td>0.60</td><td>0.0%</td><td>$0</td></tr>
+                <tr><td>0.56</td><td>0.60</td><td>−10.0%</td><td><em>sell/skip</em></td></tr>
+            </table>
+
+            <p>A 4pp error in your probability estimate moves Kelly by 10pp of bankroll. If your model is even slightly miscalibrated, full Kelly can <em>double</em> the stake you should actually take.</p>
+
+            <div class="callout">
+                <strong>The key insight:</strong> you are sizing based on an <em>estimate</em> of your edge, not the edge itself. Shrink accordingly.
+            </div>
+
+            <h2>Fractional Kelly: The Practical Answer</h2>
+
+            <p>The industry standard is <strong>fractional Kelly</strong>: stake a constant fraction of what full Kelly suggests. Common fractions:</p>
+
+            <table>
+                <tr><th>Fraction</th><th>Name</th><th>Use case</th></tr>
+                <tr><td>1.00</td><td>Full Kelly</td><td>Theoretical only. Not recommended.</td></tr>
+                <tr><td>0.50</td><td>Half Kelly</td><td>Experienced traders with well-calibrated edge estimates.</td></tr>
+                <tr><td>0.25</td><td>Quarter Kelly</td><td>Standard starting point for automated bots. Industry default.</td></tr>
+                <tr><td>0.10</td><td>Tenth Kelly</td><td>Conservative. Early-stage model with uncertain calibration.</td></tr>
+            </table>
+
+            <p>Why fractions work: halving the Kelly fraction cuts your growth rate by only ~25% but halves your variance. On a real-world estimator with calibration error, the actual growth rate with half Kelly often <em>exceeds</em> full Kelly because you don't over-stake when q is overestimated.</p>
+
+            <p>Our own moneyline trading bot defaults to <strong>quarter Kelly</strong> with a hard cap at 5% of bankroll per trade. In six months of live data, this produces consistent positive growth rates without the 40-70% drawdowns full Kelly would induce.</p>
+
+            <h2>Python: Fractional Kelly Sizing</h2>
+<pre><code>def kelly_fraction(market_price: float, fair_prob: float) -&gt; float:
+    """Compute Kelly fraction for a binary contract.
+
+    Returns 0.0 if no edge (or negative edge — caller should sell/skip).
+    """
+    if market_price &gt;= 1.0 or market_price &lt;= 0:
+        return 0.0
+    if fair_prob &lt;= market_price:
+        return 0.0
+    return (fair_prob - market_price) / (1.0 - market_price)
+
+def size_position(bankroll_usd: float,
+                  market_price: float,
+                  fair_prob: float,
+                  kelly_fraction_mult: float = 0.25,
+                  max_per_trade_pct: float = 0.05,
+                  min_per_trade_usd: float = 1.0) -&gt; float:
+    """Returns USD to stake, respecting fractional Kelly + hard cap + min size."""
+    f_star = kelly_fraction(market_price, fair_prob)
+    if f_star &lt;= 0:
+        return 0.0
+    stake_pct = min(f_star * kelly_fraction_mult, max_per_trade_pct)
+    stake_usd = bankroll_usd * stake_pct
+    if stake_usd &lt; min_per_trade_usd:
+        return 0.0
+    return stake_usd
+
+# Example
+stake = size_position(
+    bankroll_usd=5000,
+    market_price=0.60,    # market ask = 60c
+    fair_prob=0.72,       # model fair = 72%
+    kelly_fraction_mult=0.25,  # quarter Kelly
+    max_per_trade_pct=0.05,    # hard cap 5%
+)
+# stake = $250 (quarter Kelly suggests 7.5%, capped at 5%)
+</code></pre>
+
+            <h2>Adjustments for Real Markets</h2>
+
+            <h3>Execution cost</h3>
+            <p>Kelly assumes you get the quoted price. In reality, you'll pay slippage, taker fees, and lose to latency. Shrink your <span class="inline-code">fair_prob</span> by a small buffer (0.005-0.01) before computing Kelly. This correctly models "the edge I capture is smaller than the edge I calculate."</p>
+
+            <h3>Correlation across positions</h3>
+            <p>Kelly assumes your bets are independent. On prediction markets, they rarely are: two positions on different NBA games in the same slate have correlated model risk (if your NBA model is miscalibrated, both trades lose). Never let Kelly put more than ~15% of bankroll across all same-sport simultaneous positions, regardless of individual Kelly signals.</p>
+
+            <h3>Maximum number of concurrent positions</h3>
+            <p>If you have 20 open positions each sized at 2% Kelly, that's 40% of bankroll at risk simultaneously. Limit either per-position size or total concurrent exposure. A practical rule: <span class="inline-code">max_concurrent_exposure_pct = 15% to 20%</span>.</p>
+
+            <div class="cta">
+                <p><strong>Skip the sizing math.</strong> ZenHodl's API delivers calibrated fair probabilities for 11 sports, and the included bot course shows how to size trades with Kelly-based risk management.</p>
+                <a href="https://zenhodl.net">See ZenHodl</a>
+            </div>
+
+            <h2>When Kelly Is the Wrong Tool</h2>
+
+            <ul>
+                <li><strong>You're not compounding.</strong> If you're paying out profits to yourself, Kelly's optimality breaks down. Use fixed-fraction sizing.</li>
+                <li><strong>Your edge estimate is unstable.</strong> If q has high variance across similar trades, Kelly over-stakes on outliers.</li>
+                <li><strong>Path matters more than expected value.</strong> Kelly maximizes log-growth, which is indifferent to 40% drawdowns. If a 40% drawdown would bankrupt you operationally, use fractional Kelly or a hard drawdown limit.</li>
+            </ul>
+
+            <h2>Summary</h2>
+            <ul>
+                <li>Kelly for binary contracts: <span class="inline-code">f* = (q − p) / (1 − p)</span></li>
+                <li>Use <strong>quarter Kelly</strong> as a default unless you have high confidence in your calibration</li>
+                <li>Cap single trades at 5% of bankroll and total exposure at 15-20%</li>
+                <li>Shrink your fair_prob by 0.5-1.0 cents before sizing to model execution cost</li>
+                <li>When q is very uncertain, skip the trade — not every signal deserves capital</li>
+            </ul>
+
+            <p>Further reading: <a href="/understanding-edge-prediction-markets">Understanding Edge in Prediction Markets</a> &middot; <a href="/risk-management-prediction-market-bots">Risk Management for Automated Bots</a> &middot; <a href="/polymarket-order-book-sharp-traders">Reading Polymarket Order Books</a></p>
+        </article>
+    </div>
+
+    <footer>
+        <div class="container">
+            &copy; 2026 Trading Symposium &middot; <a href="https://zenhodl.net">ZenHodl API</a>
+        </div>
+    </footer>
+</body>
+</html>

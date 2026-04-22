@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Risk Management Rules for Automated Prediction Market Bots | Trading Symposium</title>
+    <meta name="description" content="The seven risk management rules every automated prediction market trading bot needs: position limits, drawdown stops, exposure caps, and circuit breakers. With Python code.">
+    <keywords name="keywords" content="risk management, trading bot, prediction market risk, position limits, drawdown, circuit breaker, exposure cap">
+    <link rel="canonical" href="https://tradingsymposium.com/risk-management-prediction-market-bots">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1a1a2e; background: #fafafa; line-height: 1.8; }
+        .container { max-width: 760px; margin: 0 auto; padding: 0 24px; }
+        header { background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); color: white; padding: 40px 0; }
+        header h1 { font-size: 1.8rem; margin-bottom: 8px; }
+        header .meta { font-size: 0.9rem; opacity: 0.7; }
+        nav { background: #24243e; padding: 12px 0; }
+        nav .container { display: flex; gap: 24px; flex-wrap: wrap; }
+        nav a { color: #b8b8d4; text-decoration: none; font-size: 0.95rem; }
+        nav a:hover { color: white; }
+        article { background: white; border-radius: 12px; padding: 40px 32px; margin: 32px auto; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        article h2 { font-size: 1.4rem; margin: 32px 0 12px; color: #302b63; }
+        article h3 { font-size: 1.15rem; margin: 24px 0 8px; color: #444; }
+        article p { margin-bottom: 16px; color: #333; }
+        article ul, article ol { margin: 0 0 16px 24px; color: #333; }
+        article li { margin-bottom: 6px; }
+        pre { background: #1a1a2e; color: #e0e0e0; padding: 20px; border-radius: 8px; overflow-x: auto; margin: 16px 0; font-size: 0.88rem; line-height: 1.5; }
+        code { font-family: 'SF Mono', 'Fira Code', monospace; }
+        .inline-code { background: #f0f0f5; padding: 2px 6px; border-radius: 4px; font-size: 0.9em; color: #302b63; }
+        .callout { background: #f0f0ff; border-left: 4px solid #5c5ac7; padding: 16px 20px; margin: 20px 0; border-radius: 0 8px 8px 0; }
+        .callout a { color: #5c5ac7; font-weight: 600; }
+        .callout-warn { background: #fff3e0; border-left-color: #ff9800; }
+        .callout-err { background: #ffebee; border-left-color: #c62828; }
+        .rule { background: #1a1a2e; color: white; display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 700; margin-right: 8px; }
+        .cta { background: linear-gradient(135deg, #302b63, #5c5ac7); color: white; padding: 24px; border-radius: 12px; margin: 32px 0; text-align: center; }
+        .cta a { color: #fff; text-decoration: none; font-weight: 700; font-size: 1.1rem; border: 2px solid white; padding: 10px 24px; border-radius: 8px; display: inline-block; margin-top: 8px; }
+        .cta a:hover { background: rgba(255,255,255,0.15); }
+        table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.95rem; }
+        th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid #e0e0e5; }
+        th { color: #302b63; font-weight: 700; background: #f0f0ff; }
+        footer { background: #24243e; color: #b8b8d4; padding: 30px 0; text-align: center; font-size: 0.85rem; }
+        footer a { color: #8e8cc7; }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="container">
+            <a href="/">Home</a>
+            <a href="/sports-prediction-trading-bot">Trading Bots</a>
+            <a href="/understanding-edge-prediction-markets">Finding Edge</a>
+            <a href="/kelly-criterion-prediction-market-sizing">Kelly Sizing</a>
+            <a href="/polymarket-order-book-sharp-traders">Order Books</a>
+            <a href="/risk-management-prediction-market-bots">Risk Management</a>
+        </div>
+    </nav>
+    <header>
+        <div class="container">
+            <h1>Risk Management Rules for Automated Prediction Market Bots</h1>
+            <div class="meta">April 21, 2026 &middot; 14 min read</div>
+        </div>
+    </header>
+    <div class="container">
+        <article>
+            <p>Edge finds the trade. Risk management keeps you in the game long enough for edge to matter. Most retail traders obsess over strategy and ignore risk — then discover that one day of bad trades or one software bug vaporizes six months of profit.</p>
+
+            <p>This post catalogs seven risk management rules every automated prediction market bot must enforce before a live deploy. Each rule is presented with the failure it prevents and concrete Python code to implement it.</p>
+
+            <h2>The Seven Rules</h2>
+
+            <ol>
+                <li>Hard cap on position size (per trade)</li>
+                <li>Hard cap on total simultaneous exposure</li>
+                <li>Per-game exposure cap (correlation control)</li>
+                <li>Daily loss limit (halt on drawdown)</li>
+                <li>Rolling win-rate circuit breaker (halt on model drift)</li>
+                <li>Maximum concurrent open positions</li>
+                <li>Stop-trading window during known regime shifts</li>
+            </ol>
+
+            <h2><span class="rule">Rule 1</span> Hard Cap on Position Size</h2>
+
+            <p><strong>Prevents:</strong> one bug in your sizing function draining your bankroll on a single trade.</p>
+
+            <p>Even if you use Kelly sizing with all the right formulas, a numerical bug or an extreme input (fair_prob = 0.99, market = 0.01) can produce a Kelly suggestion of "stake everything." A hard cap in code stops this from mattering.</p>
+
+<pre><code>MAX_STAKE_PCT = 0.05   # 5% hard cap per trade, regardless of Kelly
+MIN_STAKE_USD = 1.00   # skip trades below $1 — not worth the fees
+
+def safe_stake(bankroll: float, kelly_suggested_pct: float) -&gt; float:
+    """Apply hard cap and minimum after Kelly computation."""
+    pct = min(kelly_suggested_pct, MAX_STAKE_PCT)
+    stake = bankroll * pct
+    if stake &lt; MIN_STAKE_USD:
+        return 0.0
+    return stake
+</code></pre>
+
+            <h2><span class="rule">Rule 2</span> Total Simultaneous Exposure Cap</h2>
+
+            <p><strong>Prevents:</strong> 10 simultaneous positions each "within limits" combining into a portfolio-level disaster.</p>
+
+            <p>Rule 1 controls individual positions. Rule 2 controls the portfolio. Even if every single position is within your per-trade cap, having 20 of them open at once exposes you to massively correlated downside. Cap total open exposure at 15-20% of bankroll.</p>
+
+<pre><code>MAX_CONCURRENT_EXPOSURE_PCT = 0.15   # 15% of bankroll across all open positions
+
+def can_open_new_position(bankroll: float, open_positions: list, new_stake: float) -&gt; bool:
+    current_exposure = sum(p.stake_usd for p in open_positions if not p.settled)
+    new_total = current_exposure + new_stake
+    return (new_total / bankroll) &lt;= MAX_CONCURRENT_EXPOSURE_PCT
+</code></pre>
+
+            <h2><span class="rule">Rule 3</span> Per-Game Exposure Cap</h2>
+
+            <p><strong>Prevents:</strong> correlated loss on a single game nuking your session.</p>
+
+            <p>If your model is wrong about a specific game — roster change, injury you didn't know about, weather impact — every position on that game loses together. Cap exposure per game to ~3% of bankroll regardless of how many signals fire.</p>
+
+<pre><code>MAX_EXPOSURE_PER_GAME_PCT = 0.03   # 3% per game
+
+def can_enter_game(bankroll: float, open_positions: list,
+                   game_id: str, new_stake: float) -&gt; bool:
+    game_exposure = sum(
+        p.stake_usd for p in open_positions
+        if p.game_id == game_id and not p.settled
+    )
+    return ((game_exposure + new_stake) / bankroll) &lt;= MAX_EXPOSURE_PER_GAME_PCT
+</code></pre>
+
+            <div class="callout">
+                <strong>Real-world example:</strong> an MLB game where our model evaluated 50 signals on the same matchup over the course of 3 hours. Without a per-game cap, we might have entered 10 of them with equal confidence and taken a coordinated loss when the model was wrong about the starting pitcher's stuff. With the cap, maximum damage from that one game is 3% of bankroll.
+            </div>
+
+            <h2><span class="rule">Rule 4</span> Daily Loss Limit (Halt on Drawdown)</h2>
+
+            <p><strong>Prevents:</strong> a bad day compounding into revenge-trading or model-death-spiral.</p>
+
+            <p>When you're down 4-5% in a day, your natural emotional response — even via code, weirdly — is to take more risk to "make it back." Don't. Set a hard daily loss limit, and have the bot halt automatically when it's hit.</p>
+
+<pre><code>DAILY_LOSS_LIMIT_PCT = 0.04   # 4% daily drawdown triggers halt
+
+class DailyLossCircuitBreaker:
+    def __init__(self, starting_bankroll: float):
+        self.session_start_bankroll = starting_bankroll
+        self.session_pnl = 0.0
+        self.tripped = False
+
+    def record_settlement(self, pnl_usd: float):
+        self.session_pnl += pnl_usd
+        if self.session_pnl &lt; -DAILY_LOSS_LIMIT_PCT * self.session_start_bankroll:
+            self.tripped = True
+            logger.critical(f"CIRCUIT BREAKER: daily loss {self.session_pnl:+.2f}")
+
+    def can_trade(self) -&gt; bool:
+        return not self.tripped
+</code></pre>
+
+            <p>When the circuit breaker trips, the bot stops entering new positions but lets existing ones settle naturally. This prevents you from locking in losses by force-closing winners.</p>
+
+            <h2><span class="rule">Rule 5</span> Rolling Win-Rate Circuit Breaker</h2>
+
+            <p><strong>Prevents:</strong> silent model drift quietly accumulating losses for days before you notice.</p>
+
+            <p>Daily loss limits catch one-day disasters. But a miscalibrated model can bleed slowly — 2% per day for 10 days. Each individual day stays under your limit; the total is a 20% drawdown.</p>
+
+            <p>Solution: track rolling win rate over the last N trades. If it drops below a threshold that suggests model drift, halt.</p>
+
+<pre><code>from collections import deque
+
+class WinRateCircuitBreaker:
+    def __init__(self, window_n: int = 20, min_wr: float = 0.45):
+        self.outcomes = deque(maxlen=window_n)
+        self.min_wr = min_wr
+
+    def record(self, won: bool):
+        self.outcomes.append(1 if won else 0)
+
+    def check(self) -&gt; tuple[bool, float]:
+        if len(self.outcomes) &lt; self.outcomes.maxlen:
+            return True, 0.5  # not enough data
+        wr = sum(self.outcomes) / len(self.outcomes)
+        return wr &gt;= self.min_wr, wr
+
+    def can_trade(self) -&gt; bool:
+        ok, wr = self.check()
+        if not ok:
+            logger.warning(f"Rolling WR circuit breaker: wr={wr:.1%}")
+        return ok
+</code></pre>
+
+            <p>Typical thresholds for a calibrated bot targeting 60-65% WR: halt if rolling WR over last 20 trades falls below 45%. That's a clear signal that something has shifted from training distribution.</p>
+
+            <h2><span class="rule">Rule 6</span> Max Concurrent Positions</h2>
+
+            <p><strong>Prevents:</strong> runaway signal loops and "death by a thousand cuts" from micro-positions.</p>
+
+            <p>Hard ceiling on number of simultaneously open positions. Even if individual positions are small, 100 positions is a lot of state to manage and a lot of correlated paths to manage.</p>
+
+<pre><code>MAX_CONCURRENT_POSITIONS = 20
+
+def can_open(open_positions: list) -&gt; bool:
+    active = sum(1 for p in open_positions if not p.settled)
+    return active &lt; MAX_CONCURRENT_POSITIONS
+</code></pre>
+
+            <h2><span class="rule">Rule 7</span> Stop-Trading Windows</h2>
+
+            <p><strong>Prevents:</strong> trading into known regime shifts your model wasn't trained on.</p>
+
+            <p>Some market conditions you know are outside your model's training distribution. Examples from prediction markets:</p>
+
+            <ul>
+                <li><strong>Pregame minutes.</strong> First 2 minutes of a game have few informative game-state features; model accuracy is near pregame-prior levels. Don't trade.</li>
+                <li><strong>Last 30 seconds of close games.</strong> Volatility explodes, spreads widen 5x, model isn't calibrated for end-game buzzer-beaters. Don't trade.</li>
+                <li><strong>Major injury or ejection news arriving mid-game.</strong> Market adjusts before your score-based model notices. Trade half-size for 2 minutes after any score pause &gt; 90 seconds.</li>
+                <li><strong>First week of a new season.</strong> Rosters and team chemistry aren't established. Reduce size until 2 weeks of games are in the books.</li>
+            </ul>
+
+<pre><code>def in_no_trade_window(game_state: GameState) -&gt; bool:
+    # Pregame first 2 minutes
+    if game_state.seconds_elapsed &lt; 120:
+        return True
+    # Last 30 seconds of close games (margin ≤ 5 pts)
+    if game_state.seconds_remaining &lt; 30 and abs(game_state.score_diff) &lt;= 5:
+        return True
+    # Long score pause (injury, review)
+    if (time.time() - game_state.last_score_change_ts) &gt; 90:
+        return True
+    return False
+</code></pre>
+
+            <h2>Putting It All Together</h2>
+
+            <p>A single entry-check function combining all rules:</p>
+
+<pre><code>class RiskGate:
+    def __init__(self, bankroll: float):
+        self.bankroll = bankroll
+        self.daily_breaker = DailyLossCircuitBreaker(bankroll)
+        self.wr_breaker = WinRateCircuitBreaker(window_n=20, min_wr=0.45)
+
+    def should_enter(self, stake_usd: float, game_id: str,
+                     game_state: GameState,
+                     open_positions: list) -&gt; tuple[bool, str]:
+
+        if not self.daily_breaker.can_trade():
+            return False, "daily_loss_limit_hit"
+        if not self.wr_breaker.can_trade():
+            return False, "rolling_wr_circuit_breaker"
+        if not can_open(open_positions):
+            return False, "max_concurrent_positions"
+        if not can_open_new_position(self.bankroll, open_positions, stake_usd):
+            return False, "total_exposure_cap"
+        if not can_enter_game(self.bankroll, open_positions, game_id, stake_usd):
+            return False, "per_game_exposure_cap"
+        if in_no_trade_window(game_state):
+            return False, "no_trade_window"
+        if stake_usd &gt; self.bankroll * MAX_STAKE_PCT:
+            return False, "per_trade_hard_cap"
+        return True, "ok"
+</code></pre>
+
+            <h2>Summary Table</h2>
+
+            <table>
+                <tr><th>Rule</th><th>Typical value</th><th>Prevents</th></tr>
+                <tr><td>Per-trade cap</td><td>5% of bankroll</td><td>Bug in sizing function</td></tr>
+                <tr><td>Total exposure cap</td><td>15-20%</td><td>Portfolio correlation risk</td></tr>
+                <tr><td>Per-game cap</td><td>3%</td><td>Single-game model error</td></tr>
+                <tr><td>Daily loss limit</td><td>4%</td><td>Single-day disaster</td></tr>
+                <tr><td>Rolling WR breaker</td><td>WR &lt; 45% over 20 trades</td><td>Slow model drift</td></tr>
+                <tr><td>Max positions</td><td>20 concurrent</td><td>State management chaos</td></tr>
+                <tr><td>No-trade windows</td><td>Pregame, late close, injuries</td><td>Out-of-distribution inputs</td></tr>
+            </table>
+
+            <div class="callout callout-err">
+                <strong>The real test:</strong> run your bot in paper mode for a month and check how often each rule fires. If a rule never fires, it's not doing anything. If one fires every day, it's too tight. Calibrate.
+            </div>
+
+            <div class="cta">
+                <p><strong>Start with a system that has risk management built-in.</strong> ZenHodl's API ships with documented per-trade, per-game, and per-session risk controls — no need to rediscover these rules through painful drawdowns.</p>
+                <a href="https://zenhodl.net">See ZenHodl</a>
+            </div>
+
+            <p>Further reading: <a href="/kelly-criterion-prediction-market-sizing">Kelly Criterion for Sizing</a> &middot; <a href="/polymarket-order-book-sharp-traders">Reading Order Books</a> &middot; <a href="/understanding-edge-prediction-markets">Finding Edge in Prediction Markets</a></p>
+        </article>
+    </div>
+
+    <footer>
+        <div class="container">
+            &copy; 2026 Trading Symposium &middot; <a href="https://zenhodl.net">ZenHodl API</a>
+        </div>
+    </footer>
+</body>
+</html>
