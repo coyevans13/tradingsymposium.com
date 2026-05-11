@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Betting Odds Converter — American, Decimal, Fractional, Implied Probability | Trading Symposium</title>
+    <meta name="description" content="Free betting odds converter. Convert between American (-110), decimal (1.91), fractional (10/11), and implied probability. Includes vig remover for two-sided markets. No signup required.">
+    <meta name="keywords" content="betting odds converter, american to decimal, decimal to american, implied probability calculator, vig remover, fair odds, prediction market converter">
+    <link rel="canonical" href="https://tradingsymposium.com/odds-converter/">
+    <meta property="og:title" content="Betting Odds Converter — Free Tool">
+    <meta property="og:description" content="Convert between American, decimal, fractional, and implied probability. Built-in vig remover.">
+    <meta property="og:url" content="https://tradingsymposium.com/odds-converter/">
+    <meta property="og:type" content="website">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1a1a2e; background: #fafafa; line-height: 1.7; }
+        .container { max-width: 800px; margin: 0 auto; padding: 0 24px; }
+        header { background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); color: white; padding: 60px 0 40px; }
+        header h1 { font-size: 2rem; margin-bottom: 8px; }
+        header p { font-size: 1.05rem; opacity: 0.85; }
+        nav { background: #24243e; padding: 12px 0; }
+        nav .container { display: flex; gap: 24px; flex-wrap: wrap; }
+        nav a { color: #b8b8d4; text-decoration: none; font-size: 0.95rem; }
+        nav a:hover { color: white; }
+        main { padding: 40px 0 60px; }
+        .tool-card { background: white; border-radius: 12px; padding: 32px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .tool-card h2 { font-size: 1.3rem; color: #302b63; margin-bottom: 6px; }
+        .tool-card .desc { color: #666; margin-bottom: 24px; font-size: 0.95rem; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
+        .field { display: flex; flex-direction: column; }
+        .field label { font-size: 0.85rem; color: #555; margin-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .field input { font-size: 1.05rem; padding: 12px 14px; border: 1px solid #d1d5db; border-radius: 8px; font-family: inherit; transition: border-color 0.15s, box-shadow 0.15s; }
+        .field input:focus { outline: none; border-color: #5c5ac7; box-shadow: 0 0 0 3px rgba(92, 90, 199, 0.15); }
+        .field input.invalid { border-color: #dc2626; background: #fef2f2; }
+        .hint { font-size: 0.78rem; color: #888; margin-top: 4px; }
+        .reset-btn { background: transparent; border: 1px solid #d1d5db; color: #666; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; margin-top: 16px; }
+        .reset-btn:hover { background: #f5f5f5; color: #333; }
+        .vig-output { margin-top: 16px; padding: 16px; background: #f5f3ff; border-left: 3px solid #5c5ac7; border-radius: 6px; }
+        .vig-output strong { color: #302b63; }
+        .vig-output .row { margin-bottom: 4px; font-family: 'SF Mono', Monaco, monospace; font-size: 0.95rem; }
+        .vig-output .total { margin-top: 8px; padding-top: 8px; border-top: 1px solid #d8d4f0; }
+        .quick-table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 0.9rem; }
+        .quick-table th, .quick-table td { text-align: right; padding: 8px 12px; border-bottom: 1px solid #e5e7eb; font-family: 'SF Mono', Monaco, monospace; }
+        .quick-table th { background: #f5f3ff; color: #302b63; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; }
+        .quick-table td:first-child, .quick-table th:first-child { text-align: left; }
+        .info { background: white; border-radius: 12px; padding: 28px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .info h2 { font-size: 1.2rem; color: #302b63; margin-bottom: 12px; }
+        .info p { margin-bottom: 12px; color: #444; }
+        .info code { background: #f5f3ff; padding: 2px 6px; border-radius: 4px; font-family: 'SF Mono', Monaco, monospace; font-size: 0.92em; color: #302b63; }
+        .cta { background: linear-gradient(135deg, #f5f3ff, #ede9fe); border: 1px solid #d8d4f0; border-radius: 12px; padding: 28px; text-align: center; }
+        .cta h3 { color: #302b63; margin-bottom: 8px; }
+        .cta p { color: #555; margin-bottom: 16px; }
+        .cta a.btn { display: inline-block; background: #302b63; color: white; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; }
+        .cta a.btn:hover { background: #5c5ac7; }
+        footer { background: #24243e; color: #b8b8d4; padding: 30px 0; text-align: center; font-size: 0.85rem; }
+        footer a { color: #8e8cc7; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Betting Odds Converter</h1>
+            <p>American, decimal, fractional, and implied probability — instantly synced</p>
+        </div>
+    </header>
+    <nav>
+        <div class="container">
+            <a href="/">Home</a>
+            <a href="/understanding-edge-prediction-markets/">Finding Edge</a>
+            <a href="/kelly-criterion-prediction-market-sizing/">Kelly Sizing</a>
+            <a href="/closing-line-value-prediction-markets/">CLV</a>
+            <a href="/risk-management-prediction-market-bots/">Risk</a>
+            <a href="https://zenhodl.net" target="_blank" rel="noopener">ZenHodl &rarr;</a>
+        </div>
+    </nav>
+    <main>
+        <div class="container">
+            <div class="tool-card">
+                <h2>Convert between formats</h2>
+                <p class="desc">Type into any field — the others update automatically. All four represent the same price.</p>
+                <div class="grid">
+                    <div class="field">
+                        <label for="american">American odds</label>
+                        <input type="text" id="american" placeholder="-110 or +200" autocomplete="off">
+                        <div class="hint">Negative = favorite, positive = underdog</div>
+                    </div>
+                    <div class="field">
+                        <label for="decimal">Decimal odds</label>
+                        <input type="text" id="decimal" placeholder="1.91" autocomplete="off">
+                        <div class="hint">Total return per $1 staked</div>
+                    </div>
+                    <div class="field">
+                        <label for="fractional">Fractional odds</label>
+                        <input type="text" id="fractional" placeholder="10/11" autocomplete="off">
+                        <div class="hint">Profit / stake (UK format)</div>
+                    </div>
+                    <div class="field">
+                        <label for="implied">Implied probability</label>
+                        <input type="text" id="implied" placeholder="52.4%" autocomplete="off">
+                        <div class="hint">The chance the price implies</div>
+                    </div>
+                </div>
+                <button class="reset-btn" onclick="resetAll()">Reset</button>
+            </div>
+
+            <div class="tool-card">
+                <h2>Remove the vig (two-sided market)</h2>
+                <p class="desc">Sportsbook implied probabilities sum to more than 100% — the extra is the bookmaker's margin. Enter both sides to see the fair (no-vig) probability.</p>
+                <div class="grid">
+                    <div class="field">
+                        <label for="sideA">Side A — American odds</label>
+                        <input type="text" id="sideA" placeholder="-110" autocomplete="off">
+                    </div>
+                    <div class="field">
+                        <label for="sideB">Side B — American odds</label>
+                        <input type="text" id="sideB" placeholder="-110" autocomplete="off">
+                    </div>
+                </div>
+                <div class="vig-output" id="vigOutput" style="display: none;">
+                    <div class="row">Side A implied: <strong id="impliedA"></strong></div>
+                    <div class="row">Side B implied: <strong id="impliedB"></strong></div>
+                    <div class="row total">Total: <strong id="impliedTotal"></strong> &nbsp;&middot;&nbsp; Vig: <strong id="vigAmount"></strong></div>
+                    <div class="row" style="margin-top: 10px;">Side A fair: <strong id="fairA"></strong></div>
+                    <div class="row">Side B fair: <strong id="fairB"></strong></div>
+                </div>
+            </div>
+
+            <div class="tool-card">
+                <h2>Quick reference</h2>
+                <p class="desc">Common moneyline lines across all four formats.</p>
+                <table class="quick-table">
+                    <thead>
+                        <tr><th>American</th><th>Decimal</th><th>Fractional</th><th>Implied</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>-250</td><td>1.40</td><td>2/5</td><td>71.4%</td></tr>
+                        <tr><td>-200</td><td>1.50</td><td>1/2</td><td>66.7%</td></tr>
+                        <tr><td>-150</td><td>1.67</td><td>4/6</td><td>60.0%</td></tr>
+                        <tr><td>-110</td><td>1.91</td><td>10/11</td><td>52.4%</td></tr>
+                        <tr><td>+100</td><td>2.00</td><td>1/1</td><td>50.0%</td></tr>
+                        <tr><td>+110</td><td>2.10</td><td>11/10</td><td>47.6%</td></tr>
+                        <tr><td>+150</td><td>2.50</td><td>3/2</td><td>40.0%</td></tr>
+                        <tr><td>+200</td><td>3.00</td><td>2/1</td><td>33.3%</td></tr>
+                        <tr><td>+400</td><td>5.00</td><td>4/1</td><td>20.0%</td></tr>
+                        <tr><td>+650</td><td>7.50</td><td>13/2</td><td>13.3%</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="info">
+                <h2>How the conversions work</h2>
+                <p><strong>American to implied probability:</strong> If the line is negative, <code>prob = -odds / (-odds + 100)</code>. If positive, <code>prob = 100 / (odds + 100)</code>.</p>
+                <p><strong>Decimal to implied probability:</strong> <code>prob = 1 / decimal</code>. Decimal 2.0 means 50% — a $1 bet returns $2 total ($1 stake + $1 profit).</p>
+                <p><strong>Fractional to implied probability:</strong> <code>prob = denominator / (numerator + denominator)</code>. So 10/11 means 11 / (10+11) = 52.4%.</p>
+                <p><strong>The vig:</strong> Two-sided sportsbook lines almost never sum to 100% — they sum to 104-108%. The extra is the bookmaker's margin. Removing it (proportional normalization) gives the fair probability the book actually thinks each side has.</p>
+                <p>Prediction markets like Polymarket and Kalshi skip the vig entirely. The displayed price IS the implied probability, with no margin built in (other than a small explicit taker fee, typically 1-2%).</p>
+            </div>
+
+            <div class="cta">
+                <h3>Stop converting odds. Start trading probabilities.</h3>
+                <p>ZenHodl publishes calibrated win probabilities for 11 sports — no vig to remove, no format conversion needed. Seven-day free trial.</p>
+                <a class="btn" href="https://zenhodl.net/pricing" target="_blank" rel="noopener">Try ZenHodl free &rarr;</a>
+            </div>
+        </div>
+    </main>
+    <footer>
+        <div class="container">
+            <p>&copy; 2026 Trading Symposium &middot; Free educational tools for prediction market traders &middot; <a href="https://zenhodl.net" target="_blank" rel="noopener">Powered by ZenHodl</a></p>
+        </div>
+    </footer>
+
+<script>
+const $ = id => document.getElementById(id);
+
+// ---- Conversion math ----
+function americanToProb(a) {
+    if (a > 0) return 100 / (a + 100);
+    return -a / (-a + 100);
+}
+function probToAmerican(p) {
+    if (p <= 0 || p >= 1) return null;
+    if (p > 0.5) return Math.round(-100 * p / (1 - p));
+    return Math.round(100 * (1 - p) / p);
+}
+function fmtAmerican(a) {
+    if (a === null || !isFinite(a)) return '';
+    return (a > 0 ? '+' : '') + a;
+}
+function decimalToProb(d) { return 1 / d; }
+function probToDecimal(p) { return 1 / p; }
+function fractionalToProb(num, den) { return den / (num + den); }
+function probToFractional(p) {
+    // dec_profit = (1/p) - 1, then approximate as small fraction
+    const profitPerStake = (1 / p) - 1;
+    if (!isFinite(profitPerStake) || profitPerStake <= 0) return '';
+    // Try denominators 1..20, pick the closest
+    let best = { num: 1, den: 1, err: Infinity };
+    for (let den = 1; den <= 20; den++) {
+        const num = Math.round(profitPerStake * den);
+        if (num <= 0) continue;
+        const err = Math.abs(num / den - profitPerStake);
+        if (err < best.err - 1e-9) best = { num, den, err };
+    }
+    // Reduce
+    const g = gcd(best.num, best.den);
+    return `${best.num / g}/${best.den / g}`;
+}
+function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
+
+// ---- Field sync ----
+let updating = false;
+function syncFromProb(p, sourceId) {
+    if (p <= 0 || p >= 1 || !isFinite(p)) return;
+    updating = true;
+    if (sourceId !== 'american') {
+        const a = probToAmerican(p);
+        $('american').value = fmtAmerican(a);
+    }
+    if (sourceId !== 'decimal') {
+        $('decimal').value = probToDecimal(p).toFixed(3);
+    }
+    if (sourceId !== 'fractional') {
+        $('fractional').value = probToFractional(p);
+    }
+    if (sourceId !== 'implied') {
+        $('implied').value = (p * 100).toFixed(2) + '%';
+    }
+    clearInvalid();
+    updating = false;
+}
+
+function clearInvalid() {
+    ['american', 'decimal', 'fractional', 'implied'].forEach(id => $(id).classList.remove('invalid'));
+}
+function markInvalid(id) { $(id).classList.add('invalid'); }
+function clearAll() {
+    ['american', 'decimal', 'fractional', 'implied'].forEach(id => { if (id !== this) $(id).value = ''; });
+}
+
+$('american').addEventListener('input', e => {
+    if (updating) return;
+    const raw = e.target.value.trim().replace(/^\+/, '');
+    if (raw === '') { ['decimal', 'fractional', 'implied'].forEach(id => $(id).value = ''); clearInvalid(); return; }
+    const a = parseFloat(raw);
+    if (isNaN(a) || (a > -100 && a < 100 && a !== 0)) { markInvalid('american'); return; }
+    syncFromProb(americanToProb(a), 'american');
+});
+$('decimal').addEventListener('input', e => {
+    if (updating) return;
+    const raw = e.target.value.trim();
+    if (raw === '') { ['american', 'fractional', 'implied'].forEach(id => $(id).value = ''); clearInvalid(); return; }
+    const d = parseFloat(raw);
+    if (isNaN(d) || d <= 1) { markInvalid('decimal'); return; }
+    syncFromProb(decimalToProb(d), 'decimal');
+});
+$('fractional').addEventListener('input', e => {
+    if (updating) return;
+    const raw = e.target.value.trim();
+    if (raw === '') { ['american', 'decimal', 'implied'].forEach(id => $(id).value = ''); clearInvalid(); return; }
+    const m = raw.match(/^(\d+)\s*\/\s*(\d+)$/);
+    if (!m) { markInvalid('fractional'); return; }
+    const num = parseInt(m[1]), den = parseInt(m[2]);
+    if (den === 0) { markInvalid('fractional'); return; }
+    syncFromProb(fractionalToProb(num, den), 'fractional');
+});
+$('implied').addEventListener('input', e => {
+    if (updating) return;
+    const raw = e.target.value.trim().replace(/%/g, '');
+    if (raw === '') { ['american', 'decimal', 'fractional'].forEach(id => $(id).value = ''); clearInvalid(); return; }
+    const pct = parseFloat(raw);
+    if (isNaN(pct) || pct <= 0 || pct >= 100) { markInvalid('implied'); return; }
+    syncFromProb(pct / 100, 'implied');
+});
+
+function resetAll() {
+    ['american', 'decimal', 'fractional', 'implied'].forEach(id => { $(id).value = ''; $(id).classList.remove('invalid'); });
+}
+
+// ---- Vig remover ----
+function updateVig() {
+    const aRaw = $('sideA').value.trim().replace(/^\+/, '');
+    const bRaw = $('sideB').value.trim().replace(/^\+/, '');
+    if (aRaw === '' || bRaw === '') { $('vigOutput').style.display = 'none'; return; }
+    const aOdds = parseFloat(aRaw), bOdds = parseFloat(bRaw);
+    if (isNaN(aOdds) || isNaN(bOdds)) { $('vigOutput').style.display = 'none'; return; }
+    const pa = americanToProb(aOdds), pb = americanToProb(bOdds);
+    const total = pa + pb;
+    const vig = total - 1;
+    const fairA = pa / total, fairB = pb / total;
+    $('impliedA').textContent = (pa * 100).toFixed(2) + '%';
+    $('impliedB').textContent = (pb * 100).toFixed(2) + '%';
+    $('impliedTotal').textContent = (total * 100).toFixed(2) + '%';
+    $('vigAmount').textContent = (vig * 100).toFixed(2) + '%';
+    $('fairA').textContent = (fairA * 100).toFixed(2) + '%';
+    $('fairB').textContent = (fairB * 100).toFixed(2) + '%';
+    $('vigOutput').style.display = 'block';
+}
+$('sideA').addEventListener('input', updateVig);
+$('sideB').addEventListener('input', updateVig);
+
+// Seed with -110 example so the page is not empty on load
+$('american').value = '-110';
+$('american').dispatchEvent(new Event('input'));
+</script>
+</body>
+</html>
