@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How We Turn Sports Win-Probability Models Into Polymarket Edge Signals in Real Time | Trading Symposium</title>
+    <meta name="description" content="The end-to-end pipeline that converts a calibrated sports win-probability model into actionable Polymarket edge signals — score polling, fair-probability computation, edge math, freshness gating, and order placement.">
+    <meta name="keywords" content="real-time edge signals, polymarket trading bot, win probability model, edge detection, sports betting bot, in-play trading">
+    <link rel="canonical" href="https://tradingsymposium.com/real-time-polymarket-edge-signals/">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1a1a2e; background: #fafafa; line-height: 1.8; }
+        .container { max-width: 760px; margin: 0 auto; padding: 0 24px; }
+        header { background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); color: white; padding: 40px 0; }
+        header h1 { font-size: 1.8rem; margin-bottom: 8px; }
+        header .meta { font-size: 0.9rem; opacity: 0.7; }
+        nav { background: #24243e; padding: 12px 0; }
+        nav .container { display: flex; gap: 24px; flex-wrap: wrap; }
+        nav a { color: #b8b8d4; text-decoration: none; font-size: 0.95rem; }
+        nav a:hover { color: white; }
+        article { background: white; padding: 40px 0; }
+        article h2 { font-size: 1.4rem; color: #302b63; margin: 32px 0 12px; }
+        article h3 { font-size: 1.15rem; color: #302b63; margin: 24px 0 8px; }
+        article p { margin-bottom: 16px; color: #333; }
+        article ul, article ol { margin: 0 0 16px 24px; color: #333; }
+        article li { margin-bottom: 8px; }
+        article code { background: #f5f3ff; padding: 2px 6px; border-radius: 4px; font-family: 'SF Mono', Monaco, monospace; font-size: 0.92em; color: #302b63; }
+        article pre { background: #1a1a2e; color: #e5e7eb; padding: 18px; border-radius: 8px; overflow-x: auto; margin: 16px 0; font-family: 'SF Mono', Monaco, monospace; font-size: 0.88rem; line-height: 1.6; }
+        article pre code { background: none; padding: 0; color: inherit; }
+        article a { color: #5c5ac7; }
+        article strong { color: #1a1a2e; }
+        .cta { background: linear-gradient(135deg, #f5f3ff, #ede9fe); border: 1px solid #d8d4f0; border-radius: 12px; padding: 28px; text-align: center; margin: 32px 0; }
+        .cta h3 { color: #302b63; margin-bottom: 8px; }
+        .cta a.btn { display: inline-block; background: #302b63; color: white; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; }
+        .cta a.btn:hover { background: #5c5ac7; }
+        footer { background: #24243e; color: #b8b8d4; padding: 30px 0; text-align: center; font-size: 0.85rem; }
+        footer a { color: #8e8cc7; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>How We Turn Sports Win-Probability Models Into Polymarket Edge Signals in Real Time</h1>
+            <div class="meta">May 11, 2026 &middot; 12 min read</div>
+        </div>
+    </header>
+    <nav>
+        <div class="container">
+            <a href="/">Home</a>
+            <a href="/odds-converter/">Odds Converter</a>
+            <a href="/understanding-edge-prediction-markets/">Finding Edge</a>
+            <a href="/kelly-criterion-prediction-market-sizing/">Kelly Sizing</a>
+            <a href="/closing-line-value-prediction-markets/">CLV</a>
+            <a href="/risk-management-prediction-market-bots/">Risk</a>
+        </div>
+    </nav>
+    <article>
+        <div class="container">
+            <p>A calibrated win-probability model is the entry ticket to prediction-market trading. Turning it into an actual edge signal that fires real orders against a real market is a separate engineering problem with its own gotchas. This post walks through the live pipeline we run on Polymarket — score polling, fair-probability computation, edge math, freshness gating, and order placement — at the level of detail you would need to build one yourself.</p>
+
+            <h2>The five-stage pipeline</h2>
+            <p>Every signal that reaches our order placement layer has passed through five stages, in this order:</p>
+            <ol>
+                <li><strong>Live game state ingestion</strong> from ESPN, official league APIs, or sport-specific feeds (lolesports, MLB Stats API, NHL API).</li>
+                <li><strong>Fair probability computation</strong> by feeding the game state into the per-sport model.</li>
+                <li><strong>Live market price ingestion</strong> via Polymarket's CLOB WebSocket (orderbook updates push, no polling).</li>
+                <li><strong>Edge math + freshness gating</strong> — compute the gap between fair and ask, reject anything stale or outside the edge band.</li>
+                <li><strong>Order placement</strong> via the Polymarket CLOB REST API with EIP-712 signatures.</li>
+            </ol>
+            <p>Stages 1-3 run continuously as background tasks. Stage 4 runs on a fast inner loop (every 500ms). Stage 5 fires only when stage 4 emits a signal. Total end-to-end latency, from game-state event to order placement, is 800-1500ms in normal operation.</p>
+
+            <h2>Stage 1: Game state polling cadence</h2>
+            <p>The single most consequential design decision is polling cadence. Too slow and the market beats you to every move. Too fast and you burn rate limit on idle games.</p>
+            <p>Our cadence varies by sport based on event density:</p>
+            <ul>
+                <li>NBA, NCAAMB: every 5 seconds (high event density, fast clock)</li>
+                <li>NHL: every 5 seconds (faster than NBA when scoring happens)</li>
+                <li>MLB: every 10 seconds (slow clock, but pitch-by-pitch)</li>
+                <li>Soccer: every 15 seconds (events less frequent, clock is just minutes)</li>
+                <li>Tennis: every 10 seconds (point-by-point)</li>
+                <li>CS2, LoL: every 10 seconds (round/objective-based)</li>
+            </ul>
+            <p>Within each cadence, we de-duplicate state. If the game state has not changed since the last poll, we do not re-compute the fair probability. This cuts compute cost by roughly 60% on slow-moving games.</p>
+
+            <h2>Stage 2: Fair probability computation</h2>
+            <p>The fair probability comes from a per-sport pickled model — XGBoost with isotonic calibration for most sports, a Poisson process for soccer (which needs the draw outcome), and a hierarchical point-game-set model for tennis. Each model takes the current game state as input and emits a calibrated win probability for the home side (or, for soccer, three outcomes summing to 1.0).</p>
+            <p>The compute cost per prediction is small — single-digit milliseconds for XGBoost, slightly more for the soccer Poisson because of the score grid summation. With per-sport caching of the model file in memory, we can produce predictions at well over 100/second per worker.</p>
+
+            <h2>Stage 3: Polymarket WebSocket subscription</h2>
+            <p>The CLOB WebSocket pushes orderbook updates as they happen. We subscribe to the YES tokens for every active game contract and maintain an in-memory order book. The best ask updates within milliseconds of any market participant's action. This is dramatically lower latency than polling the REST endpoint, which we use only as a fallback when the WebSocket disconnects.</p>
+            <p>Polymarket's WebSocket is generally reliable but disconnects every few hours during maintenance windows. The handler reconnects automatically and replays any missed orderbook snapshots from REST to bring the in-memory state current. Without this reconnect logic, the bot silently goes blind for hours at a time and you do not notice until you check trade volumes the next morning.</p>
+
+            <h2>Stage 4: Edge math and freshness gating</h2>
+            <p>The inner loop runs every 500ms. For each watched contract, it checks:</p>
+            <pre><code>if (now - quote.ts) > MAX_QUOTE_AGE_S: skip
+if (now - game_state.ts) > MAX_GAME_AGE_S: skip
+fair_prob = predict(game_state)
+edge_c = fair_prob * 100 - quote.ask_c - taker_fee_c
+if MIN_EDGE_C <= edge_c <= MAX_EDGE_C: emit_signal</code></pre>
+            <p>The MIN_EDGE_C and MAX_EDGE_C thresholds are sport-specific. The minimum is calibrated to clear costs (typically 5-8 cents). The maximum is the lesson we paid for in tennis — see our <a href="/understanding-edge-prediction-markets/">edge band post</a>. Without the maximum, the bot fires on its own model errors.</p>
+            <p>The freshness gates (MAX_QUOTE_AGE_S, MAX_GAME_AGE_S) are 5 and 8 seconds respectively. If either side is stale beyond that, the trade is skipped. Stale data is the worst kind of trade decision because the apparent edge has usually already disappeared.</p>
+
+            <h2>Stage 5: Order placement</h2>
+            <p>The order is placed via Polymarket's CLOB REST API. The request needs an EIP-712 signature from the trading wallet. We use the proxy-wallet pattern (Gnosis Safe v1.3.0 wrapper) for security — the EOA private key signs, but funds live in the proxy.</p>
+            <p>Order size is set by quarter-Kelly sizing (see our <a href="/kelly-criterion-prediction-market-sizing/">Kelly post</a>). Order type is FOK (fill-or-kill) at the best ask price. If the order does not fill instantly, we do not chase — the price has already moved and the edge math no longer applies.</p>
+            <p>Latency from signal emission to order placement is typically 200-400ms. The EIP-712 signing is the slowest step at around 50-100ms; the network round-trip to the CLOB is 100-200ms.</p>
+
+            <h2>What can go wrong</h2>
+            <p>Every production bot has been bitten by these in some order:</p>
+            <ul>
+                <li><strong>Stale game state.</strong> ESPN's feed lags major scoring plays by 5-30 seconds depending on sport. The model thinks the team is ahead when they have just gone behind. Edge looks huge. Trade is wrong. Mitigation: cap maximum edge.</li>
+                <li><strong>Stale orderbook.</strong> WebSocket disconnects unnoticed. The "best ask" you see is from minutes ago. Mitigation: heartbeat the connection and reset the in-memory book on reconnect.</li>
+                <li><strong>Position duplication.</strong> Same signal fires every poll cycle until the position fills. Without idempotent emission, you place 50 orders for the same contract in 25 seconds. Mitigation: TTL cache keyed by token + bucket.</li>
+                <li><strong>Settlement-time double-count.</strong> If the bot restarts mid-game without restoring open positions from the trade log, it loses track of its exposure and may re-buy a contract it already holds. Mitigation: persistent trade log with position reconstruction on startup.</li>
+            </ul>
+
+            <h2>What gets monitored</h2>
+            <p>Three metrics matter more than P&L itself, because they are leading indicators rather than lagging ones:</p>
+            <ul>
+                <li><strong>Closing Line Value</strong> per sport, per edge bucket. The full deep-dive is in our <a href="/closing-line-value-prediction-markets/">CLV post</a>. Positive CLV means your entries beat the closing market. Negative CLV means the market knew something you did not.</li>
+                <li><strong>Signal latency</strong> — the time between game-state event and order placement. When this drifts above 2 seconds, you are losing edge to slower data pipelines than the competition.</li>
+                <li><strong>Reject rate</strong> — the fraction of computed signals that get filtered out. A sudden change in reject rate (from 90% to 60% or vice versa) usually indicates a feed problem, not a market change.</li>
+            </ul>
+            <p>P&L is the lagging confirmation. CLV is the leading edge signal. Watch both. Trust CLV first.</p>
+
+            <h2>The bottom line</h2>
+            <p>Building a real-time edge signal pipeline is mostly engineering, not modeling. The model produces the probability. The pipeline gets the probability into a market fast enough, with enough freshness checks, and with enough idempotency to actually be tradable. Most amateur attempts fail at the engineering layer, not the modeling layer.</p>
+            <p>If you are building one, build the freshness checks and the WebSocket reconnect first. Add the order placement last. The longest-running production bots are the ones with the most paranoid plumbing.</p>
+
+            <div class="cta">
+                <h3>Real-time edge signals across 11 sports</h3>
+                <p>ZenHodl publishes calibrated win probabilities and edge signals for NBA, NHL, MLB, NCAAMB, NCAAWB, CFB, NFL, soccer, tennis, CS2, and LoL. Seven-day free trial.</p>
+                <a class="btn" href="https://zenhodl.net/pricing" target="_blank" rel="noopener">Try ZenHodl free</a>
+            </div>
+        </div>
+    </article>
+    <footer>
+        <div class="container">
+            <p>&copy; 2026 Trading Symposium &middot; <a href="https://zenhodl.net" target="_blank" rel="noopener">Powered by ZenHodl</a></p>
+        </div>
+    </footer>
+</body>
+</html>

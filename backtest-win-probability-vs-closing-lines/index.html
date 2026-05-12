@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Backtest Live Win-Probability Signals Against Closing Lines at Major Sportsbooks | Trading Symposium</title>
+    <meta name="description" content="A practical guide to backtesting in-play win-probability signals against sportsbook closing lines — data sources, time alignment, vig handling, and the methodology pitfalls that overstate backtest performance versus live results.">
+    <meta name="keywords" content="backtest win probability, closing line value backtest, sportsbook closing odds, sports betting backtesting, in-play backtest methodology">
+    <link rel="canonical" href="https://tradingsymposium.com/backtest-win-probability-vs-closing-lines/">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1a1a2e; background: #fafafa; line-height: 1.8; }
+        .container { max-width: 760px; margin: 0 auto; padding: 0 24px; }
+        header { background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); color: white; padding: 40px 0; }
+        header h1 { font-size: 1.8rem; margin-bottom: 8px; }
+        header .meta { font-size: 0.9rem; opacity: 0.7; }
+        nav { background: #24243e; padding: 12px 0; }
+        nav .container { display: flex; gap: 24px; flex-wrap: wrap; }
+        nav a { color: #b8b8d4; text-decoration: none; font-size: 0.95rem; }
+        nav a:hover { color: white; }
+        article { background: white; padding: 40px 0; }
+        article h2 { font-size: 1.4rem; color: #302b63; margin: 32px 0 12px; }
+        article h3 { font-size: 1.15rem; color: #302b63; margin: 24px 0 8px; }
+        article p { margin-bottom: 16px; color: #333; }
+        article ul, article ol { margin: 0 0 16px 24px; color: #333; }
+        article li { margin-bottom: 8px; }
+        article code { background: #f5f3ff; padding: 2px 6px; border-radius: 4px; font-family: 'SF Mono', Monaco, monospace; font-size: 0.92em; color: #302b63; }
+        article pre { background: #1a1a2e; color: #e5e7eb; padding: 18px; border-radius: 8px; overflow-x: auto; margin: 16px 0; font-family: 'SF Mono', Monaco, monospace; font-size: 0.88rem; line-height: 1.6; }
+        article pre code { background: none; padding: 0; color: inherit; }
+        article a { color: #5c5ac7; }
+        article strong { color: #1a1a2e; }
+        .cta { background: linear-gradient(135deg, #f5f3ff, #ede9fe); border: 1px solid #d8d4f0; border-radius: 12px; padding: 28px; text-align: center; margin: 32px 0; }
+        .cta h3 { color: #302b63; margin-bottom: 8px; }
+        .cta a.btn { display: inline-block; background: #302b63; color: white; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; }
+        footer { background: #24243e; color: #b8b8d4; padding: 30px 0; text-align: center; font-size: 0.85rem; }
+        footer a { color: #8e8cc7; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>How to Backtest Live Win-Probability Signals Against Closing Lines at Major Sportsbooks</h1>
+            <div class="meta">May 11, 2026 &middot; 12 min read</div>
+        </div>
+    </header>
+    <nav>
+        <div class="container">
+            <a href="/">Home</a>
+            <a href="/odds-converter/">Odds Converter</a>
+            <a href="/understanding-edge-prediction-markets/">Finding Edge</a>
+            <a href="/kelly-criterion-prediction-market-sizing/">Kelly Sizing</a>
+            <a href="/closing-line-value-prediction-markets/">CLV</a>
+        </div>
+    </nav>
+    <article>
+        <div class="container">
+            <p>Backtesting an in-play win-probability model against historical sportsbook closing lines is the most rigorous way to know whether your model has edge. It is also one of the easiest things to do wrong. This post walks through the methodology we use, including the pitfalls that produce backtest results 30-50% higher than your live performance will turn out to be.</p>
+
+            <h2>Why closing lines are the right benchmark</h2>
+            <p>The closing line at a sharp sportsbook (Pinnacle, Circa) is the market's most-informed estimate of the true probability before the event begins. It incorporates all sharp money, all known information, and all market participants' best forecasts.</p>
+            <p>If your model produces a probability that beats the closing line on average — meaning your model and the closing line both observed the same outcomes, but your model assigned higher probability to the actual winners — you have edge. The full conceptual case is in our <a href="/closing-line-value-prediction-markets/">CLV deep dive</a>.</p>
+            <p>Beating the closing line is a stronger test than beating individual game outcomes. Outcome variance is huge — a single weekend can swing a win-rate measure by 15 percentage points. Closing-line value converges much faster because every game contributes a continuous-valued data point rather than a binary win or loss.</p>
+
+            <h2>Data you need</h2>
+            <p>Three datasets, joined on game and timestamp:</p>
+            <ol>
+                <li><strong>Historical game state.</strong> Score, time, period, possession at each minute (or finer) for every game. ESPN's archived JSON, or paid services like Sportradar.</li>
+                <li><strong>Historical sportsbook lines at multiple timestamps.</strong> Pinnacle's closing line is the gold standard. Their API provides every line change. The Odds API has multi-book coverage if you need consensus.</li>
+                <li><strong>Final outcomes.</strong> Trivial to source — every sport has free outcome feeds.</li>
+            </ol>
+            <p>The first dataset is what your model consumes. The second is what you compare against. The third is the ground truth.</p>
+
+            <h2>Time alignment is the first place backtests go wrong</h2>
+            <p>Your model produces a fair probability at every time t. The sportsbook line you compare against also has a timestamp. If those timestamps are not properly aligned, you are comparing apples to oranges and the comparison is meaningless.</p>
+            <p>Two specific time-alignment errors we have made:</p>
+            <p><strong>Comparing your in-play probability to a closing line that was set after the entire game ended.</strong> The closing line incorporates information your in-play model did not have at time t. The comparison is reversed — the closing line should be a benchmark for your final pre-game probability, not your minute-15 probability.</p>
+            <p><strong>Using a delayed sportsbook feed without correcting for the delay.</strong> Some historical odds feeds lag the actual market by 30-120 seconds. If your model "beats" a feed that is 90 seconds behind reality, you are not beating the market — you are beating yesterday's market.</p>
+            <p>The fix: compare your model's probability at time t against the closing line, not against the in-play line at time t. The closing line is the right benchmark because it is the market's final answer with all information incorporated.</p>
+
+            <h2>Vig must be removed before comparison</h2>
+            <p>Sportsbook lines include the bookmaker's vig — typically 4-8% on a two-way market. The implied probability of a -110/-110 line sums to 104.8%. The fair probability per side, after vig removal, is 50%/50%.</p>
+            <p>If you compare your model's probability to the raw vig-included implied probability, your model will look better than it is. The correction is straightforward but mandatory:</p>
+            <pre><code>def remove_vig(implied_a, implied_b):
+    total = implied_a + implied_b
+    return implied_a / total, implied_b / total</code></pre>
+            <p>Always remove vig before comparison. Always. Our <a href="/odds-converter/">odds converter</a> demonstrates this interactively.</p>
+
+            <h2>Choose the right metric</h2>
+            <p>For comparing your model to the market, two metrics dominate:</p>
+            <p><strong>Brier score</strong> against the actual outcome. If your model's probability is closer to the realized outcome (1 if home wins, 0 if away) than the closing line's probability is, your model has edge in that comparison. Average across many games and you get a robust per-sport edge measure.</p>
+            <p><strong>Closing line value</strong> in cents. If your model would have entered at price X cents and the line closed at price Y cents, your CLV is Y - X. Positive means your entry beat the close; negative means it lost. This is what we monitor in production.</p>
+            <p>Win rate is a poor metric. It is too noisy and too dependent on outcome variance. Use it as a sanity check, not a primary measure.</p>
+
+            <h2>Walk-forward, not random splits</h2>
+            <p>A random 80/20 split of historical games will overstate your model's performance because it allows information to leak from future games into your training set. Use walk-forward cross-validation instead: train on games before time t, test on games after time t, advance t, repeat.</p>
+            <p>For a multi-season backtest, expanding-window walk-forward (train on all prior data, test on the next month) is usually the right choice. For a single-season backtest, four-fold expanding-window CV (5 equal time slices, train on 1, test on 2; train on 1+2, test on 3; etc.) is reasonable.</p>
+            <p>The full case for walk-forward is at <a href="https://zenhodl.net/static/notebooklm_16_walk_forward_validation.md" target="_blank" rel="noopener">our walk-forward methodology post</a>. The short version: it produces lower numbers than random splits, and the lower numbers are correct.</p>
+
+            <h2>The backtest-to-live gap</h2>
+            <p>Even with perfect methodology, your live performance will be lower than your backtest indicates. The gap comes from real-world frictions the backtest cannot fully model:</p>
+            <ul>
+                <li>Slippage on real fills versus backtest closing-price proxy (1-3 cents per trade)</li>
+                <li>Real-time data lag versus backtest's perfect-information assumption (0-2 cents)</li>
+                <li>Settlement-time and resolution edge cases the backtest does not encounter</li>
+                <li>Strategy adaptation by other market participants between backtest period and now</li>
+            </ul>
+            <p>A reasonable rule of thumb: discount your backtest CLV by 30-50% when projecting live performance. If the backtest shows positive 5 cents per trade, expect 2.5-3.5 cents live. If the backtest shows positive 10 cents per trade, expect 5-7 cents live. Anyone whose live numbers match their backtest numbers either got lucky or is measuring something wrong.</p>
+
+            <h2>What a clean backtest output looks like</h2>
+            <p>For each sport, edge bucket, and time-period bucket, report:</p>
+            <ul>
+                <li>Number of trades</li>
+                <li>Win rate</li>
+                <li>Average CLV (cents)</li>
+                <li>Walk-forward fold standard deviation of CLV</li>
+                <li>Cumulative dollar P&L assuming quarter-Kelly sizing</li>
+            </ul>
+            <p>The fold standard deviation matters more than the mean. A bucket with mean CLV 4 cents and fold std 1 cent is real edge. A bucket with mean CLV 4 cents and fold std 6 cents is noise that happened to average positive across folds.</p>
+
+            <h2>The bottom line</h2>
+            <p>A backtest done right is the most honest signal you have about whether your model has edge. A backtest done wrong is a confidence trap that produces a great-looking report and live losses. The difference is in the methodology — time alignment, vig removal, walk-forward CV, and honest discounting of the backtest-to-live gap.</p>
+
+            <div class="cta">
+                <h3>Calibrated probabilities you can backtest yourself</h3>
+                <p>ZenHodl publishes historical predictions and backtest harnesses for 11 sports. Validate the methodology on your own data.</p>
+                <a class="btn" href="https://zenhodl.net/pricing" target="_blank" rel="noopener">Try ZenHodl free</a>
+            </div>
+        </div>
+    </article>
+    <footer>
+        <div class="container">
+            <p>&copy; 2026 Trading Symposium &middot; <a href="https://zenhodl.net" target="_blank" rel="noopener">Powered by ZenHodl</a></p>
+        </div>
+    </footer>
+</body>
+</html>

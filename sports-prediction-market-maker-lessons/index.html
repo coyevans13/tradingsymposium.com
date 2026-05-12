@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inside a Sports Prediction Market Market-Maker: Lessons from Modeling 11 Sports | Trading Symposium</title>
+    <meta name="description" content="Lessons from running a multi-sport prediction-market trading operation across 11 sports — what generalizes, what is sport-specific, and which parts of the playbook we kept changing the longest.">
+    <meta name="keywords" content="prediction market, market maker, sports trading, polymarket, multi-sport modeling, lessons learned">
+    <link rel="canonical" href="https://tradingsymposium.com/sports-prediction-market-maker-lessons/">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1a1a2e; background: #fafafa; line-height: 1.8; }
+        .container { max-width: 760px; margin: 0 auto; padding: 0 24px; }
+        header { background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); color: white; padding: 40px 0; }
+        header h1 { font-size: 1.8rem; margin-bottom: 8px; }
+        header .meta { font-size: 0.9rem; opacity: 0.7; }
+        nav { background: #24243e; padding: 12px 0; }
+        nav .container { display: flex; gap: 24px; flex-wrap: wrap; }
+        nav a { color: #b8b8d4; text-decoration: none; font-size: 0.95rem; }
+        nav a:hover { color: white; }
+        article { background: white; padding: 40px 0; }
+        article h2 { font-size: 1.4rem; color: #302b63; margin: 32px 0 12px; }
+        article h3 { font-size: 1.15rem; color: #302b63; margin: 24px 0 8px; }
+        article p { margin-bottom: 16px; color: #333; }
+        article ul, article ol { margin: 0 0 16px 24px; color: #333; }
+        article li { margin-bottom: 8px; }
+        article a { color: #5c5ac7; }
+        article strong { color: #1a1a2e; }
+        article blockquote { border-left: 3px solid #5c5ac7; padding: 12px 20px; margin: 20px 0; background: #f5f3ff; color: #444; border-radius: 0 8px 8px 0; }
+        .cta { background: linear-gradient(135deg, #f5f3ff, #ede9fe); border: 1px solid #d8d4f0; border-radius: 12px; padding: 28px; text-align: center; margin: 32px 0; }
+        .cta h3 { color: #302b63; margin-bottom: 8px; }
+        .cta a.btn { display: inline-block; background: #302b63; color: white; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; }
+        footer { background: #24243e; color: #b8b8d4; padding: 30px 0; text-align: center; font-size: 0.85rem; }
+        footer a { color: #8e8cc7; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Inside a Sports Prediction Market Market-Maker: Lessons from Modeling 11 Sports</h1>
+            <div class="meta">May 11, 2026 &middot; 11 min read</div>
+        </div>
+    </header>
+    <nav>
+        <div class="container">
+            <a href="/">Home</a>
+            <a href="/odds-converter/">Odds Converter</a>
+            <a href="/understanding-edge-prediction-markets/">Finding Edge</a>
+            <a href="/kelly-criterion-prediction-market-sizing/">Kelly Sizing</a>
+            <a href="/closing-line-value-prediction-markets/">CLV</a>
+            <a href="/risk-management-prediction-market-bots/">Risk</a>
+        </div>
+    </nav>
+    <article>
+        <div class="container">
+            <p>Most prediction-market write-ups focus on a single sport. We have spent the last fourteen months running automated trading across eleven of them — basketball, hockey, baseball, college football, NFL, soccer, tennis, CS2, LoL — and the cross-sport perspective taught us things that a single-sport view never could. This post is the consolidated set of lessons.</p>
+
+            <h2>What generalizes across sports</h2>
+            <p>About two-thirds of the playbook is the same regardless of sport. The infrastructure is identical. The risk-management primitives are identical. The CLV-versus-win-rate distinction applies everywhere. The Kelly-Criterion sizing applies everywhere. The "cap your maximum edge" lesson applies everywhere.</p>
+            <p>The first time we ported a working bot to a new sport, we expected to rebuild most of it. We rebuilt almost none. The model swapped, the feature pipeline swapped, the live data source swapped — but the trade lifecycle (signal &rarr; size &rarr; fire &rarr; settle &rarr; log) and the monitoring stack (CLV, drift alerts, circuit breakers) did not change.</p>
+            <p>This is the strongest argument for a unified codebase: most prediction-market trading is the same problem with different inputs. Specializing too early — building a NBA-specific bot, a NHL-specific bot, a CS2-specific bot — makes the cross-sport infrastructure lessons invisible.</p>
+
+            <h2>What does not generalize</h2>
+            <p>The sport-specific layer is where the work concentrates. A few patterns:</p>
+            <p><strong>Clock semantics.</strong> Basketball has quarters with stoppage. Hockey has periods with overtime. Baseball has innings with no clock. Soccer has elapsed minutes plus stoppage time displayed as "45'+3'". Tennis has sets and games and points and tiebreaks. Each clock requires its own state model. The unifying abstraction has to support all of them.</p>
+            <p><strong>Outcome cardinality.</strong> Most sports are binary (home wins or away wins). Soccer is ternary (home / draw / away). Some bots and dashboards assume binary throughout. Adding soccer correctly means refactoring those assumptions. Better to design for n-ary outcomes from day one.</p>
+            <p><strong>Score grid behavior.</strong> Basketball scores in 2s and 3s; hockey scores in 1s; baseball runs are essentially Poisson; soccer goals are very low Poisson; tennis points are Bernoulli. The right model family differs sport by sport. There is no master architecture that works for all of them — XGBoost is great for basketball and football, terrible for soccer (you need the draw outcome), and useless for tennis (the hierarchical structure dominates).</p>
+
+            <h2>Where each sport surprised us</h2>
+            <p><strong>NCAAMB</strong> was easier than NBA. More games, less attention from sharp money, larger and more persistent edges. The 5,345-game NCAAMB backtest produced 4.39% Expected Calibration Error — the best of any sport in our coverage. Our biggest dollar profits come from this league.</p>
+            <p><strong>Tennis</strong> was harder than expected. The hierarchical structure (point-game-set-match) makes the model genuinely complex, and the high-edge band is plagued by stale data more than any other sport. ATP edges over 20 cents have a worse win rate than coin flip in our 30-day data. We cap maximum edge at 20c.</p>
+            <p><strong>Soccer</strong> required rethinking the entire outcome model. Three-way markets, Poisson scoring, league strength normalization for international competitions — none of which exists in basketball or hockey. We built a separate Poisson process model for soccer and it could not borrow much from the other bots.</p>
+            <p><strong>CS2</strong> data was a nightmare for months. Round-level data is gated behind various paid APIs and scraped sources of varying reliability. The model accuracy is dramatically dependent on which fallback tier is feeding it. We eventually built a 4-tier fallback chain (bo3.gg + combined &rarr; map ML &rarr; series ML &rarr; Elo binomial). The chain is what makes CS2 trading viable.</p>
+            <p><strong>CFB</strong> we killed. Negative across every edge bucket. The model is the issue — feature coverage is patchy across teams and the home-field advantage is much larger and more team-specific than other sports. Disabled until we rebuild the feature set.</p>
+
+            <h2>Operational lessons</h2>
+            <p><strong>Settlement reliability matters more than price latency.</strong> Missing a settlement (because the bot was offline when the contract resolved) costs more in CLV data quality than any single late entry. We invested heavily in restart-safe position tracking. Worth every hour.</p>
+            <p><strong>Drift alerts are necessary, not optional.</strong> Models drift. Players retire. Strategies adapt. A model that was well-calibrated in February will not be well-calibrated in May without intervention. Our recalibration runs nightly and a model-health alert fires if Expected Calibration Error rises past threshold. Without this, we would have shipped degraded models for weeks before noticing.</p>
+            <p><strong>Per-sport circuit breakers save you from your own mistakes.</strong> When a sport's rolling 30-day ROI drops below -5%, the bot disables that sport automatically. It re-enables when the rolling ROI recovers above 0%. Self-healing. The breaker has saved us from at least three multi-week bleeds where we would have manually rationalized continuing to trade.</p>
+            <p><strong>The non-trading work eats more time than the trading.</strong> Building the bot is the small project. Monitoring it, alerting on drift, managing data feeds, handling exchange API changes, and patching the bug surface area is the long tail. Budget for it.</p>
+
+            <h2>Strategic lessons</h2>
+            <p><strong>Edge is everywhere it is small.</strong> The biggest edges (20+ cents) are usually model errors. The middle of the distribution (8-18 cents) is where the actual money is. We learned this in tennis, then re-learned it in NHL, then re-learned it in MLB. It is the most universal lesson in the book.</p>
+            <p><strong>Cross-sport scaling beats single-sport optimization.</strong> Spending another month tuning the NBA bot to squeeze 0.3 more cents per trade was always worse than spending the same month adding a new sport with greenfield edge. Diversification across uncorrelated sports also smooths the equity curve dramatically.</p>
+            <p><strong>The market gets more efficient over time.</strong> Edges that existed 12 months ago may not exist today. Continuous retraining and continuous edge monitoring is the only defense. Models that stop being updated stop making money.</p>
+
+            <h2>What we still have not figured out</h2>
+            <p>A few open questions:</p>
+            <ul>
+                <li>Optimal exit timing. We currently hold all positions to settlement; we have not found an exit rule that beats hold-to-settlement on backtests, but we suspect one exists for very large in-game swings.</li>
+                <li>Cross-sport correlation in drawdowns. When the model is having a bad day on NBA, is it also more likely to be having a bad day on NHL? We see correlations in the data but have not turned them into a portfolio-level risk control.</li>
+                <li>Optimal model retraining cadence. We retrain weekly. We do not know if daily would be better — the retraining itself introduces variance, and there is a tradeoff we have not fully characterized.</li>
+            </ul>
+
+            <h2>The bottom line</h2>
+            <p>Running a multi-sport book is mostly the same job done eleven times with different inputs. The shared infrastructure is the moat. The sport-specific models are the entry tickets. The discipline of measuring edge per sport per bucket, killing the losing buckets, and resisting the urge to "fix" working bots is what separates the books that compound from the books that drift.</p>
+
+            <div class="cta">
+                <h3>11-sport calibrated probability API</h3>
+                <p>ZenHodl runs the production bots described in this post and publishes the per-sport calibration metrics. Seven-day free trial.</p>
+                <a class="btn" href="https://zenhodl.net/pricing" target="_blank" rel="noopener">Try ZenHodl free</a>
+            </div>
+        </div>
+    </article>
+    <footer>
+        <div class="container">
+            <p>&copy; 2026 Trading Symposium &middot; <a href="https://zenhodl.net" target="_blank" rel="noopener">Powered by ZenHodl</a></p>
+        </div>
+    </footer>
+</body>
+</html>
