@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>What Is Polymarket? A Plain-English 2026 Guide | Trading Symposium</title>
+    <meta name="description" content="What Polymarket actually is, who runs it, how its event contracts work, where prices come from, what you can trade, and what makes it different from a sportsbook. The plain-English explainer for someone who just heard the name.">
+    <meta name="keywords" content="what is polymarket, polymarket explained, polymarket guide, prediction market, event contracts, polymarket how it works, polymarket beginner">
+    <link rel="canonical" href="https://tradingsymposium.com/what-is-polymarket-plain-english-guide">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1a1a2e; background: #fafafa; line-height: 1.8; }
+        .container { max-width: 760px; margin: 0 auto; padding: 0 24px; }
+        header { background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); color: white; padding: 40px 0; }
+        header h1 { font-size: 1.8rem; margin-bottom: 8px; }
+        header .meta { font-size: 0.9rem; opacity: 0.7; }
+        nav { background: #24243e; padding: 12px 0; }
+        nav .container { display: flex; gap: 24px; flex-wrap: wrap; }
+        nav a { color: #b8b8d4; text-decoration: none; font-size: 0.95rem; }
+        nav a:hover { color: white; }
+        article { background: white; border-radius: 12px; padding: 40px 32px; margin: 32px auto; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        article h2 { font-size: 1.4rem; margin: 32px 0 12px; color: #302b63; }
+        article h3 { font-size: 1.15rem; margin: 24px 0 8px; color: #444; }
+        article p { margin-bottom: 16px; color: #333; }
+        article ul, article ol { margin: 0 0 16px 24px; color: #333; }
+        article li { margin-bottom: 6px; }
+        pre { background: #1a1a2e; color: #e0e0e0; padding: 20px; border-radius: 8px; overflow-x: auto; margin: 16px 0; font-size: 0.88rem; line-height: 1.5; }
+        code { font-family: 'SF Mono', 'Fira Code', monospace; }
+        table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.92rem; }
+        th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid #e8e8f0; }
+        th { background: #f5f5fa; color: #302b63; font-weight: 600; }
+        .callout { background: #f0f0ff; border-left: 4px solid #5c5ac7; padding: 16px 20px; margin: 20px 0; border-radius: 0 8px 8px 0; }
+        .callout a { color: #5c5ac7; font-weight: 600; }
+        .warning { background: #fff5f0; border-left: 4px solid #e74c3c; }
+        .cta { background: linear-gradient(135deg, #302b63, #5c5ac7); color: white; padding: 24px; border-radius: 12px; margin: 32px 0; text-align: center; }
+        .cta a { color: #fff; text-decoration: none; font-weight: 700; font-size: 1.1rem; border: 2px solid white; padding: 10px 24px; border-radius: 8px; display: inline-block; margin-top: 8px; }
+        .cta a:hover { background: rgba(255,255,255,0.15); }
+        footer { background: #24243e; color: #b8b8d4; padding: 30px 0; text-align: center; font-size: 0.85rem; }
+        footer a { color: #8e8cc7; }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="container">
+            <a href="/">Home</a>
+            <a href="/sports-prediction-trading-bot">Trading Bots</a>
+            <a href="/understanding-edge-prediction-markets">Finding Edge</a>
+            <a href="/kelly-criterion-prediction-market-sizing">Kelly Sizing</a>
+            <a href="/risk-management-prediction-market-bots">Risk Management</a>
+            <a href="/closing-line-value-prediction-markets">CLV</a>
+            <a href="/what-is-polymarket-plain-english-guide">What Is Polymarket</a>
+        </div>
+    </nav>
+    <header>
+        <div class="container">
+            <h1>What Is Polymarket? A Plain-English 2026 Guide</h1>
+            <div class="meta">May 18, 2026 &middot; 10 min read</div>
+        </div>
+    </header>
+    <div class="container">
+        <article>
+            <p>You've seen the headlines. "Polymarket gave Trump 60% odds before the polls did." "Polymarket called the Super Bowl winner from the third quarter onward." "Polymarket's CEO had his apartment raided by the FBI." For something that didn't exist eight years ago, Polymarket has earned an outsized share of the news cycle.</p>
+
+            <p>But for most people the basic question is still open: <strong>what actually is it?</strong> Not the financial-engineering version, not the crypto version, not the political-controversy version. The plain-English version. That's this post.</p>
+
+            <h2>The One-Sentence Definition</h2>
+
+            <p>Polymarket is an online exchange where users buy and sell contracts that pay $1 if a specific real-world event happens and $0 if it doesn't.</p>
+
+            <p>That's the entire idea. Everything else &mdash; the blockchain, the dollar-stablecoin funding, the order book, the resolution mechanism &mdash; is plumbing. What matters is the contract: a yes/no question about the future, and a price between 0 and 100 cents that represents the market's collective belief about how likely the answer is "yes."</p>
+
+            <h2>A Concrete Example</h2>
+
+            <p>Suppose a market is created with the question "Will the Los Angeles Lakers win the 2026 NBA Championship?" Polymarket lists two contracts:</p>
+
+            <ul>
+                <li><strong>YES</strong>: Pays $1 if the Lakers win the championship, $0 if they don't.</li>
+                <li><strong>NO</strong>: Pays $1 if the Lakers don't win, $0 if they do.</li>
+            </ul>
+
+            <p>The two contracts always sum to $1, because exactly one of the two outcomes must happen. If you buy YES at 18 cents, you're paying 18&cent; for a chance at a $1 payout &mdash; an 82&cent; profit if the Lakers win, a 18&cent; loss if they don't. The market is collectively saying "the Lakers' chances are about 18%."</p>
+
+            <p>Anyone can buy or sell either side. If you think 18% is too low, you buy YES. If you think it's too high, you buy NO (or sell YES). The price moves based on demand &mdash; more YES buyers push the price up, more NO buyers push it down.</p>
+
+            <h2>What Makes Polymarket Different From a Sportsbook</h2>
+
+            <p>A traditional sportsbook (DraftKings, FanDuel, BetMGM) <em>is</em> the counterparty to your bet. They set the price, you bet against them, they keep a margin (the "vig") of 4-6% baked into the line. The book wants you to lose &mdash; their business model depends on it on average.</p>
+
+            <p>Polymarket is not a counterparty. It's an exchange &mdash; like the New York Stock Exchange for binary event contracts. Polymarket doesn't care which side wins; it makes its money on fees regardless of outcome. You're trading against other users, not against the house.</p>
+
+            <table>
+                <tr><th>Dimension</th><th>Sportsbook</th><th>Polymarket</th></tr>
+                <tr><td>Counterparty</td><td>The book</td><td>Other users</td></tr>
+                <tr><td>Spread / vig</td><td>4-6% on standard markets</td><td>Tight at the inside (cents)</td></tr>
+                <tr><td>Limits</td><td>Sharp accounts get limited</td><td>No limits if you have liquidity</td></tr>
+                <tr><td>Market making</td><td>Book only</td><td>Anyone can post quotes</td></tr>
+                <tr><td>Funding</td><td>Bank/card in fiat</td><td>USDC on Polygon</td></tr>
+                <tr><td>Coverage</td><td>Sports + entertainment</td><td>Sports, politics, crypto, economics, weather, niche</td></tr>
+            </table>
+
+            <p>The practical consequence: prices on Polymarket are usually <strong>more efficient</strong> than any single sportsbook's line, because lots of capital is competing to correct mispricings, and no one is restricting sharp traders. That makes Polymarket interesting both as a way to <em>place</em> bets and as a way to <em>read</em> probabilities &mdash; the prices themselves are useful information.</p>
+
+            <h2>How a Price Becomes a Probability</h2>
+
+            <p>The trick is that any binary contract with a $1 payout and a price between 0 and 100 cents can be read directly as a probability:</p>
+
+            <pre><code>price (cents) / 100 = market's implied probability that "yes" happens</code></pre>
+
+            <p>If a contract trades at 65&cent;, the market thinks the event is about 65% likely. If it trades at 12&cent;, about 12% likely. This is dramatically more interpretable than American odds (-115, +280) or decimal odds (1.87) on a sportsbook.</p>
+
+            <p>The clean mapping is what makes prediction markets useful beyond gambling. Economists, journalists, election forecasters, and corporate strategists routinely cite Polymarket prices as a probabilistic forecast. Whether you trade or not, learning to read these markets gives you a calibrated, real-time consensus probability on important questions &mdash; for free.</p>
+
+            <h2>What Can You Actually Trade?</h2>
+
+            <p>Polymarket lists thousands of markets across categories. As of May 2026, the biggest by volume are:</p>
+
+            <ul>
+                <li><strong>Sports.</strong> NBA, NHL, MLB, NFL, college basketball, soccer (Premier League, La Liga, Champions League, World Cup), tennis (ATP/WTA), esports (CS2, League of Legends). Both pre-game (will Team X win?) and in-game (live moneyline, spreads, totals).</li>
+                <li><strong>Politics.</strong> US presidential races, congressional outcomes, foreign elections, policy decisions, judicial rulings.</li>
+                <li><strong>Crypto.</strong> Bitcoin price levels, ETH/SOL milestones, regulatory events, exchange-specific outcomes.</li>
+                <li><strong>Economics.</strong> Fed rate decisions, inflation prints, unemployment numbers, GDP releases.</li>
+                <li><strong>Entertainment.</strong> Oscars, Emmys, weekly box office, reality-TV outcomes.</li>
+                <li><strong>Geopolitics &amp; misc.</strong> Wars, ceasefires, pandemic milestones, technology firsts.</li>
+            </ul>
+
+            <p>The variety is the moat. No single sportsbook will let you bet on whether the Fed cuts rates 25bps next meeting. Polymarket will.</p>
+
+            <h2>The Underlying Plumbing (Briefly)</h2>
+
+            <p>You don't need to understand any of this to trade Polymarket. But the basics are worth a paragraph.</p>
+
+            <p><strong>Settlement happens in USDC</strong>, a US-dollar-pegged stablecoin. You fund your account by sending USDC to your Polymarket wallet. When you buy a YES contract for 50&cent;, 50&cent; of USDC is locked. When the market resolves, USDC is paid out automatically.</p>
+
+            <p><strong>Polymarket runs on Polygon</strong>, an Ethereum layer-2 blockchain. This is why fees are low and transactions are fast. It also means you need a crypto wallet (MetaMask is the standard) and you need to fund USDC on the Polygon network specifically &mdash; not Ethereum mainnet.</p>
+
+            <p><strong>Orders match on a central limit order book (CLOB).</strong> If you place a bid at 45&cent; for 100 shares, it sits in the book until someone hits it or until a market sell trades through it. Same mechanics as Coinbase Advanced or Interactive Brokers, just for event contracts instead of stocks or crypto.</p>
+
+            <p><strong>Resolution is decided by UMA's optimistic oracle</strong>, a decentralized dispute mechanism. After an event ends, a proposer submits an outcome; if no one disputes within a window, the outcome stands and contracts pay out. Most resolutions are uncontroversial (the Lakers won, or they didn't). Edge cases get disputed and ultimately decided by UMA token holders &mdash; which has occasionally led to messy outcomes for ambiguously-worded markets.</p>
+
+            <h2>Who Actually Uses Polymarket?</h2>
+
+            <p>Roughly four populations:</p>
+
+            <ol>
+                <li><strong>Sharp sports traders.</strong> Quants, ex-poker pros, ex-bookmakers, and people running automated bots. Polymarket's deeper books and no-limit policy attract sharps who get capped on sportsbooks. This is the population we mostly write for.</li>
+                <li><strong>Political junkies and journalists.</strong> Election cycles drive massive volume. People who like watching odds shift in real time, and journalists citing those odds in commentary.</li>
+                <li><strong>Crypto-native speculators.</strong> Already have wallets, already comfortable with USDC and Polygon, looking for outlets beyond pure token trading.</li>
+                <li><strong>International casual users.</strong> Especially in jurisdictions where regulated sports betting is unavailable or expensive. Polymarket is often the most efficient option.</li>
+            </ol>
+
+            <p>What links these populations is the same property: <em>prices on Polymarket move based on information, not promotion.</em> If you have an informational edge, the market rewards it; if you don't, you'll bleed to people who do. It's a real exchange, not entertainment.</p>
+
+            <h2>Is It Legal Where You Are?</h2>
+
+            <p>This depends entirely on your jurisdiction.</p>
+
+            <ul>
+                <li><strong>US users:</strong> Polymarket geo-blocks US IPs. The CFTC fined Polymarket in 2022 and required them to exclude US persons. The US-legal alternative is Kalshi, which is CFTC-regulated and offers similar (though narrower) markets. A US-legal Polymarket is expected eventually via acquisition of a regulated entity, but is not live as of May 2026.</li>
+                <li><strong>European users:</strong> Generally permitted, though some countries have specific restrictions on gambling-like products. Most users can register without issue.</li>
+                <li><strong>UK users:</strong> Currently blocked. Polymarket is working with the Gambling Commission for re-entry.</li>
+                <li><strong>Other jurisdictions:</strong> Check local law. The default assumption should be "trading event contracts is treated like other speculative financial activity" &mdash; which varies wildly by country.</li>
+            </ul>
+
+            <p>If you're a US-based reader looking for a US-legal path, head to <a href="https://zenhodl.net/blog/polymarket-vs-kalshi-sports-prediction-2026" target="_blank" rel="noopener">our Polymarket vs Kalshi breakdown</a> for the full comparison.</p>
+
+            <h2>What Polymarket Is Not</h2>
+
+            <p>A few clarifications since this is the post that gets passed around to people Googling "what is polymarket" for the first time:</p>
+
+            <ul>
+                <li><strong>It is not a sportsbook.</strong> No promos, no limits on sharp accounts, no live-cashout features, no fixed-margin pricing. Pure exchange.</li>
+                <li><strong>It is not a meme coin or speculation on the platform itself.</strong> You're trading USDC-denominated event contracts. There is no "Polymarket token" you buy to participate.</li>
+                <li><strong>It is not anonymous in the regulatory sense.</strong> KYC is enforced. Resolution and AML controls are real.</li>
+                <li><strong>It is not "always right."</strong> Markets are reasonably efficient but they can be wrong &mdash; especially in low-volume markets or when the news cycle moves faster than the order book. The 2024 election was very close to consensus; lots of smaller markets have shown systematic biases over time.</li>
+            </ul>
+
+            <h2>How to Start Reading Markets (Even If You Don't Trade)</h2>
+
+            <p>Many of our readers care more about <em>reading</em> Polymarket than trading it. The site is free to browse without an account. Useful things to know:</p>
+
+            <ul>
+                <li><strong>Each market has a price chart.</strong> Click any market, then "Show Chart" &mdash; you'll see how the implied probability has moved over time. Big jumps usually correspond to news events; gentle drifts usually correspond to time decay or accumulating data.</li>
+                <li><strong>Volume matters.</strong> A price of 65&cent; on a market with $50 of total volume is just one person's opinion. A 65&cent; price on a market with $5M of volume is a serious crowd estimate.</li>
+                <li><strong>The order book reveals depth.</strong> Tight spreads with thick liquidity at the inside means the market is being actively priced. Wide spreads or thin books mean prices are stale or untested.</li>
+            </ul>
+
+            <p>If you're using prices to inform an external decision (placing a bet at a sportsbook, writing an article, sanity-checking your own beliefs), the volume + spread + chart picture matters more than the headline price.</p>
+
+            <div class="cta">
+                <p>Want calibrated probabilities for the same sports Polymarket trades &mdash; without the geo-block and with full historical data?</p>
+                <a href="https://zenhodl.net/?ref=tradingsymposium" target="_blank" rel="noopener">See ZenHodl &rarr;</a>
+            </div>
+
+            <h2>The Five-Bullet Summary</h2>
+
+            <ol>
+                <li>Polymarket is an exchange for yes/no contracts on real-world events. Prices map directly to probabilities.</li>
+                <li>You trade against other users, not the house. Spreads are tighter than sportsbooks and sharps are not limited.</li>
+                <li>It runs on USDC on Polygon. You need a crypto wallet to participate.</li>
+                <li>Markets cover sports, politics, economics, crypto, entertainment, and weird niche bets. Sports is the biggest single category by volume.</li>
+                <li>Legality depends on your country. US users currently use Kalshi instead; that may change in 2026-2027.</li>
+            </ol>
+
+            <h2>Further Reading</h2>
+            <ul>
+                <li><a href="/understanding-edge-prediction-markets">Understanding Edge in Prediction Markets</a> &mdash; how to identify pricing inefficiencies once you know the basics.</li>
+                <li><a href="/polymarket-order-book-sharp-traders">The Polymarket Order Book for Sharp Traders</a> &mdash; what the depth/spread tells you about a market's quality.</li>
+                <li><a href="/closing-line-value-prediction-markets">Closing Line Value</a> &mdash; the canonical metric for whether your trading actually has edge.</li>
+                <li><a href="https://zenhodl.net/?ref=tradingsymposium" target="_blank" rel="noopener">ZenHodl</a> &mdash; calibrated probabilities for 10+ sports, the model layer behind production prediction-market bots.</li>
+            </ul>
+        </article>
+    </div>
+    <footer>
+        <div class="container">
+            <p>&copy; 2026 Trading Symposium. Prediction market trading involves risk. Past performance does not guarantee future results.</p>
+            <p style="margin-top: 8px;">Sports prediction data by <a href="https://zenhodl.net?ref=tradingsymposium" target="_blank" rel="noopener">ZenHodl</a>.</p>
+        </div>
+    </footer>
+</body>
+</html>
