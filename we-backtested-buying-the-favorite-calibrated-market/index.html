@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>We Backtested Buying the Favorite on a Calibrated Prediction Market — Here's Why It Loses | Trading Symposium</title>
+    <meta name="description" content="A market where 87% favorites win 86% of the time feels like a money printer. We backtested it on real outcome-labeled Polymarket and Kalshi data and it loses — because calibration is the definition of a fairly-priced market, which makes a high win rate the anti-signal for a directional bet.">
+    <meta name="keywords" content="prediction market strategy, bet the favorite, favorite longshot bias, market calibration, expected value vs win rate, polymarket backtest, closing line value">
+    <link rel="canonical" href="https://tradingsymposium.com/we-backtested-buying-the-favorite-calibrated-market/">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1a1a2e; background: #fafafa; line-height: 1.8; }
+        .container { max-width: 760px; margin: 0 auto; padding: 0 24px; }
+        header { background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); color: white; padding: 40px 0; }
+        header h1 { font-size: 1.8rem; margin-bottom: 8px; }
+        header .meta { font-size: 0.9rem; opacity: 0.7; }
+        nav { background: #24243e; padding: 12px 0; }
+        nav .container { display: flex; gap: 24px; flex-wrap: wrap; }
+        nav a { color: #b8b8d4; text-decoration: none; font-size: 0.95rem; }
+        nav a:hover { color: white; }
+        article { background: white; padding: 40px 0; }
+        article h2 { font-size: 1.4rem; color: #302b63; margin: 32px 0 12px; }
+        article h3 { font-size: 1.15rem; color: #302b63; margin: 24px 0 8px; }
+        article p { margin-bottom: 16px; color: #333; }
+        article ul, article ol { margin: 0 0 16px 24px; color: #333; }
+        article li { margin-bottom: 8px; }
+        article code { background: #f5f3ff; padding: 2px 6px; border-radius: 4px; font-family: 'SF Mono', Monaco, monospace; font-size: 0.92em; color: #302b63; }
+        article pre { background: #1a1a2e; color: #e5e7eb; padding: 18px; border-radius: 8px; overflow-x: auto; margin: 16px 0; font-family: 'SF Mono', Monaco, monospace; font-size: 0.88rem; line-height: 1.6; }
+        article pre code { background: none; padding: 0; color: inherit; }
+        article a { color: #5c5ac7; }
+        article strong { color: #1a1a2e; }
+        table.bt { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.92rem; }
+        table.bt th, table.bt td { border: 1px solid #e2e0f0; padding: 8px 10px; text-align: left; }
+        table.bt th { background: #f5f3ff; color: #302b63; }
+        .cta { background: linear-gradient(135deg, #f5f3ff, #ede9fe); border: 1px solid #d8d4f0; border-radius: 12px; padding: 28px; text-align: center; margin: 32px 0; }
+        .cta h3 { color: #302b63; margin-bottom: 8px; }
+        .cta a.btn { display: inline-block; background: #302b63; color: white; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; }
+        footer { background: #24243e; color: #b8b8d4; padding: 30px 0; text-align: center; font-size: 0.85rem; }
+        footer a { color: #8e8cc7; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>We Backtested Buying the Favorite on a Calibrated Prediction Market — Here's Why It Loses</h1>
+            <div class="meta">June 24, 2026 &middot; 9 min read</div>
+        </div>
+    </header>
+    <nav>
+        <div class="container">
+            <a href="/">Home</a>
+            <a href="/odds-converter/">Odds Converter</a>
+            <a href="/closing-line-value-prediction-markets/">CLV</a>
+            <a href="/understanding-edge-prediction-markets/">Finding Edge</a>
+            <a href="/kelly-criterion-prediction-market-sizing/">Kelly Sizing</a>
+        </div>
+    </nav>
+    <article>
+        <div class="container">
+            <p>Here is a tempting idea. On a prediction market, teams priced around 87% to win actually win about 86% of the time. The market is well-calibrated — its prices are honest probabilities. So just buy the favorites. You'll win the overwhelming majority of your bets. How could a strategy that wins 86% of the time lose money?</p>
+
+            <p>We tested exactly this on real, outcome-labeled data, and the answer is that it loses — not because of bad luck, but because of a structural fact that's worth internalizing once and never forgetting: <strong>a well-calibrated market is a fairly-priced market, and a fairly-priced market is the <em>anti-signal</em> for a directional bet.</strong> The better the calibration, the more certain the loss.</p>
+
+            <h2>The data</h2>
+            <p>We used a cross-venue "matched book" — the same MLB games captured live on both <a href="https://zenhodl.net/blog/polymarket-vs-kalshi-order-book-depth" target="_blank" rel="noopener">Polymarket and Kalshi</a>, stitched onto one timeline, with the eventual winner labeled on every row. The honest sample is small and we'll say so up front: <strong>41 settled game-sides across about 30 games over 3 days.</strong> (The raw file has 57,757 rows, but those are the same books re-snapshotted every ~31 seconds — quoting that as your sample size is the most common way prediction-market analyses fool themselves. The real unit is the game.)</p>
+
+            <p>First we confirmed the premise. The closing prices <em>are</em> well-calibrated: the <a href="https://zenhodl.net/blog/are-prediction-markets-calibrated" target="_blank" rel="noopener">Brier score is about 0.136 on Polymarket and 0.133 on Kalshi</a> — comfortably below the 0.25 you'd get from a coin flip — and favorites priced ~87% won ~86%. So the premise of the strategy is true. Now watch it not matter.</p>
+
+            <h2>The one-line proof</h2>
+            <p>Let <code>p</code> be the price (in probability units) and assume the market is perfectly calibrated, so the true win probability is also <code>p</code>. You buy one contract at the ask, hold to settlement, and receive $1 if the team wins, $0 if it loses. Your expected profit is:</p>
+
+            <pre><code>E[profit] = (prob win)·($1 − ask) + (prob lose)·(−ask)
+          = p·(1 − ask) − (1 − p)·ask
+          = p − ask
+          = −(half-spread)        ← because a calibrated ask ≈ p + half-spread</code></pre>
+
+            <p>The price terms cancel. At <em>every</em> price — favorite, underdog, or coin flip — the calibrated taker's expected edge is exactly minus the half-spread he crossed, before a cent of platform friction. There is no <code>p</code> where this flips positive. <strong>Win rate and expected value have decoupled.</strong> The 86% win rate is real, but you already paid for all of it in the 87¢ ask: you're buying 13¢ of upside for 87¢-plus-spread, and 14% of the time you lose the whole stake.</p>
+
+            <h2>The backtest agrees</h2>
+            <p>Across all 41 game-sides, buying the tracked side at the ask returned a gross +1.8¢ per contract — which looks like a faint pulse until you put error bars on it. The game-level bootstrap 95% confidence interval runs from <strong>−9.5¢ to +13.3¢</strong> (a permutation test gives p = 0.76 — pure noise). And that's <em>before</em> trading costs. After a realistic round-trip friction on top of the spread, it's negative either way:</p>
+
+            <table class="bt">
+                <tr><th>Cost on top of the spread-inclusive ask</th><th>Net EV per contract</th></tr>
+                <tr><td>+3¢ (friendly)</td><td>−1.2¢</td></tr>
+                <tr><td>+5¢ (realistic on thin books)</td><td>−3.2¢</td></tr>
+            </table>
+
+            <p>"But the heavy favorites won every single time!" They did — ten-of-ten in the most extreme bucket. Their ask was about <strong>0.98</strong>. You pay 98¢ to win a dollar, so after 5¢ of friction that "perfect" bucket nets <strong>−2.62¢</strong>. A 100% hit rate at a 98¢ price is not an edge; it's the market doing its job.</p>
+
+            <h2>Where the "winning" buckets came from</h2>
+            <p>Every positive-looking slice we found dissolved under scrutiny, and it's worth seeing how, because these are the exact traps that make a backtest lie to you:</p>
+            <ul>
+                <li><strong>One lucky day carried the whole positive sign.</strong> Remove a single day and the tracked-side edge falls to −3.79¢. An "edge" that depends on which 3 days you sampled is not an edge.</li>
+                <li><strong>Three longshots accounted for 295% of total profit.</strong> The rest of the book was a net loss; a handful of upset winners masked it.</li>
+                <li><strong>A "perfect streak" bucket faked a positive confidence interval.</strong> One price band went 15-for-15. A bootstrap that resamples a set with zero losers can never draw a loss — so its lower bound is spuriously positive. That's a sample-size pathology, not a discovery.</li>
+            </ul>
+
+            <h2>The production proof</h2>
+            <p>We don't have to argue this in theory, because we ran the strategy with real money. Our own live trading bot takes directional positions on these markets, and on its last 115 settled trades it posted a <strong>closing-line value of −6.7¢</strong>, beat the close only 42% of the time, and ran breakeven-to-negative on ROI. That's the theorem realized in production: directional taking on a calibrated market bleeds the spread. The most useful thing our bot ever taught us is that it can't beat the market it trades.</p>
+
+            <h2>So where does a real edge live?</h2>
+            <p>If the <em>level</em> is right, the only places left for an edge are narrow, and we can see them closing on our own data:</p>
+            <ul>
+                <li><strong>Speed.</strong> One venue does move first — on the same games, <a href="https://zenhodl.net/blog/who-moves-first-polymarket-kalshi-price-discovery" target="_blank" rel="noopener">Polymarket tends to lead Kalshi</a>. But the cross-venue gap is a zero-cent median and sits inside the spread ~96% of the time, so the lead is real and uneconomic at once. You can't cross a 1¢ gap when the round trip costs 3–5¢.</li>
+                <li><strong>An un-priced conditional pocket</strong> — a specific situation the market systematically misjudges. Maybe one exists, but 41 games can't find it, and the pockets people usually chase (extreme favorites, "due" underdogs) are exactly the ones the price has already absorbed.</li>
+                <li><strong>Stop taking, start making.</strong> The half-spread that bleeds the taker is income to the market-maker. Earning the spread instead of paying it is a different game — one that needs queue priority and depth, not a win-rate hunch.</li>
+            </ul>
+
+            <h2>The takeaway</h2>
+            <p>A high win rate on a well-calibrated market is the <em>price</em>, not the edge. If anything, discovering that a market is beautifully calibrated is the strongest possible evidence that there's no directional trade in it. The signal that actually separates skill from luck isn't your win rate — it's <a href="/closing-line-value-prediction-markets/">closing-line value</a>: did you get a better price than the market's final word? Win rate flatters; CLV tells the truth.</p>
+
+            <div class="cta">
+                <h3>See the calibration analysis and the raw data</h3>
+                <p>ZenHodl publishes the full write-up plus a free, outcome-labeled Polymarket × Kalshi sample you can re-run these tests on yourself — no marketing mockups, real settled rows.</p>
+                <a class="btn" href="https://zenhodl.net/blog/are-prediction-markets-calibrated" target="_blank" rel="noopener">Read the calibration study →</a>
+            </div>
+        </div>
+    </article>
+    <footer>
+        <div class="container">
+            <p>&copy; 2026 Trading Symposium &middot; <a href="https://zenhodl.net" target="_blank" rel="noopener">Powered by ZenHodl</a></p>
+        </div>
+    </footer>
+</body>
+</html>
